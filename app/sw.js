@@ -1,5 +1,5 @@
 // Cache-first: the app shell works with no network; bump C after each update so devices fetch the new version.
-const C = 'mas-v25';
+const C = 'mas-v26';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(C).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener('activate', e => e.waitUntil(

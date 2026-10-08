@@ -1752,7 +1752,17 @@ function submitSettings(form) {
 }
 async function backup() {
   const d = new Date(), name = `mas-sao-luu-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`;
-  if (await saveFile(name, new Blob([JSON.stringify(S)], { type: 'application/json' }))) toast(`Đã tạo file ${name}.`);
+  const blob = new Blob([JSON.stringify(S)], { type: 'application/json' });
+  let ok = false;
+  try { // điện thoại: mở bảng chia sẻ để lưu vào Tệp / iCloud Drive / Zalo...
+    const f = new File([blob], name, { type: 'application/json' });
+    if (/Android|iPhone|iPad/i.test(navigator.userAgent) && navigator.canShare && navigator.canShare({ files: [f] })) {
+      await navigator.share({ files: [f], title: name });
+      ok = true; S.settings.lastBackup = Date.now(); save(); toast('Đã sao lưu.'); return;
+    }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  ok = await saveFile(name, blob);
+  if (ok) { S.settings.lastBackup = Date.now(); save(); toast(`Đã tạo file ${name}.`); }
 }
 
 /* ---------- Bản dự phòng tự động (IndexedDB) ---------- */
@@ -1770,6 +1780,7 @@ async function snapPut(why) {
   } catch (e) { return false; }
 }
 async function snapAuto() {
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {} // xin trình duyệt giữ dữ liệu bền
   try { const a = await snapAll(); if (!a.length || Date.now() - a[0].t > SNAPGAP) await snapPut('Tự động'); } catch (e) {}
 }
 async function drawSnaps() {
@@ -2128,6 +2139,10 @@ $('#m-logo').innerHTML = MissingLogo.svg({ size: 28, theme: 'dark' });
 introLogo(false);
 if (IS_APP && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 setTimeout(snapAuto, 3000); setInterval(snapAuto, 36e5);
+setTimeout(() => { // nhắc sao lưu ra file nếu đã có đơn mà quá 7 ngày chưa sao lưu
+  const t = S.settings.lastBackup || 0;
+  if (S.orders.length && Date.now() - t > 7 * 864e5) toast('Đã lâu chưa sao lưu ra file. Vào Cài đặt > Sao lưu ra file để giữ dữ liệu an toàn.', 'warn');
+}, 6000);
 })();
 </script>
 </body>
