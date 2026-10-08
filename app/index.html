@@ -164,6 +164,7 @@ textarea.input{padding:12px 14px;min-height:80px;resize:vertical}
 .toolbar .search{min-height:44px;width:320px;max-width:100%}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
 .panel > .h2{margin-bottom:12px}
+.keepwarn{background:var(--warn-bg);color:var(--warn-text);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:14px;line-height:1.5}
 .snap{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
 .impbad{background:var(--warn-bg);color:var(--warn-text);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13px;display:grid;gap:2px}
 .impprev{display:grid;gap:6px;margin-bottom:14px}
@@ -1813,6 +1814,7 @@ function viewSettings() {
     `<details><summary class="b" style="cursor:pointer;min-height:44px;display:flex;align-items:center">Xem toàn bộ giấy phép</summary><pre style="white-space:pre-wrap;font:inherit;font-size:13px;line-height:1.5;margin-top:8px">${esc(LICENSE_TXT)}</pre></details></div>` +
     '<div class="panel"><h2 class="h2">Dữ liệu</h2>' +
     ('<p class="muted" style="margin-bottom:14px">Dữ liệu lưu ngay trên máy này' + (IS_APP ? ' và dùng được khi mất mạng' : '') + '. Hãy sao lưu ra file thường xuyên, để không mất dữ liệu khi đổi máy, xóa trình duyệt hoặc gỡ app.</p>' +
+      '<div class="keepwarn" role="note"><b>Đừng xóa dữ liệu của MAS.</b> Không gỡ biểu tượng MAS khỏi màn hình, không bấm "Xóa dữ liệu trang web" hay "Xóa lịch sử" trong cài đặt trình duyệt, và không dùng chế độ riêng tư. Làm vậy sẽ mất hết hàng hóa, đơn hàng và công nợ. Đóng app hoặc tắt máy thì không sao.</div>' +
       '<div class="row-gap" style="margin-bottom:14px"><button type="button" class="btn primary" data-act="backup">Sao lưu ra file</button><button type="button" class="btn" data-act="restore">Khôi phục từ file</button>' +
       '<input type="file" id="restore-file" accept=".json,application/json" hidden></div>') +
     '<div class="row-gap" style="margin-bottom:18px"><button type="button" class="btn" data-act="exportall">Xuất toàn bộ dữ liệu ra Excel</button></div>' +
