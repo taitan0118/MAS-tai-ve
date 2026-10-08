@@ -240,6 +240,10 @@ img.tile{object-fit:cover;background:var(--surface-2)}
 .overlay{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px));z-index:50}
 .dialog{background:var(--surface);border-radius:18px;width:100%;max-width:560px;max-height:100%;overflow:auto;padding:22px;display:flex;flex-direction:column;gap:16px}
 .dialog form{display:flex;flex-direction:column;gap:16px}
+.dialog form.catrow{flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-bottom:12px}
+.catrow .input{flex:1 1 100%;min-width:0}
+.catrow.add .input{flex:1 1 0}
+.catrow .cnt{flex:1}
 .dhead{display:flex;justify-content:space-between;align-items:center;gap:12px}
 .dactions{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
 .due{display:flex;flex-direction:column}
@@ -1230,8 +1234,8 @@ function saveProd(id, v, name, sku, price, cost, stock) {
 }
 function catsModal() {
   const n = c => S.products.filter(p => p.cat === c).length;
-  return closeX('Nhóm hàng') + '<form data-form="catadd" novalidate class="row-gap" style="margin-bottom:14px;flex-wrap:nowrap"><input name="name" class="input grow" autofocus autocomplete="off" placeholder="Tên nhóm mới, ví dụ: Bánh kẹo" aria-label="Tên nhóm mới"><button type="submit" class="btn primary">Thêm</button></form>' +
-    S.cats.map((c, i) => `<form data-form="catren" data-i="${i}" novalidate class="row-gap" style="margin-bottom:8px;flex-wrap:nowrap"><input name="name" class="input grow" autocomplete="off" value="${esc(c)}" aria-label="Tên nhóm"><span class="muted sm" style="min-width:52px;text-align:right">${n(c)} hàng</span>` +
+  return closeX('Nhóm hàng') + '<form data-form="catadd" novalidate class="catrow add"><input name="name" class="input" autofocus autocomplete="off" placeholder="Tên nhóm mới, ví dụ: Bánh kẹo" aria-label="Tên nhóm mới"><button type="submit" class="btn primary">Thêm</button></form>' +
+    S.cats.map((c, i) => `<form data-form="catren" data-i="${i}" novalidate class="catrow"><input name="name" class="input" autocomplete="off" value="${esc(c)}" aria-label="Tên nhóm"><span class="muted sm cnt">${n(c)} hàng</span>` +
       '<button type="submit" class="btn sm">Lưu</button>' +
       (n(c) || S.cats.length < 2 ? '' : `<button type="button" class="btn sm danger" data-act="delcat" data-id="${i}">Xóa</button>`) + '</form>').join('') +
     '<p class="muted sm" style="margin-top:10px">Đổi tên nhóm thì hàng trong nhóm đổi theo. Chỉ xóa được nhóm đang trống.</p>';
