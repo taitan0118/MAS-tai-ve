@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tải MAS</title><meta name="theme-color" content="#0F172A">
+<style>
+:root{--ink:#0F172A;--blue:#2563EB;--sky:#38BDF8;--bg:#F8FAFC;--mut:#475569}
+*{box-sizing:border-box}body{margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--ink);color:#fff;text-align:center;padding:32px 16px 28px}
+header h1{margin:10px 0 4px;font-size:28px}header p{margin:0;color:#BFDBFE}
+main{max-width:720px;margin:0 auto;padding:16px}
+.card{background:#fff;border:1px solid #CBD5E1;border-radius:16px;padding:18px;margin:14px 0}
+.card.me{border:2px solid var(--blue);box-shadow:0 4px 18px rgba(37,99,235,.18)}
+.card h2{margin:0 0 4px;font-size:19px}.tag{display:none;font-size:12px;background:var(--blue);color:#fff;border-radius:99px;padding:2px 10px;margin-left:8px;vertical-align:middle}
+.card.me .tag{display:inline-block}
+p.s{margin:2px 0 12px;color:var(--mut);font-size:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;border-radius:12px;border:0;background:var(--blue);color:#fff;font:600 16px system-ui;text-decoration:none;cursor:pointer;margin:4px 6px 4px 0}
+.btn.alt{background:#fff;color:var(--blue);border:1.5px solid var(--blue)}
+ol{margin:8px 0 0;padding-left:22px}li{margin:6px 0}
+.warn{background:#FFFBEB;border:1px solid #F59E0B;border-radius:12px;padding:10px 12px;margin:10px 0;font-size:14px;display:none}
+.note{font-size:13px;color:var(--mut)}footer{text-align:center;font-size:12px;color:var(--mut);padding:20px 16px 36px}
+code{background:#E2E8F0;border-radius:6px;padding:1px 6px}
+</style></head><body>
+<header><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="72" height="72" role="img" aria-label="Missing"><g transform="translate(0 -6)"><path d="M40 57 V166" fill="none" stroke="#38BDF8" stroke-width="24" stroke-linecap="round"/><path d="M160 57 V166" fill="none" stroke="#38BDF8" stroke-width="24" stroke-linecap="round"/><path d="M28 58 V46 A12 12 0 0 1 40 34 H160 A12 12 0 0 1 172 46 V58 Z" fill="#22C55E"/><path d="M139.9 35.0 L137.6 35.1 L135.2 35.2 L132.9 35.4 L130.6 35.6 L128.3 35.8 L126.0 36.1 L123.8 36.5 L121.6 36.9 L119.4 37.3 L117.3 37.8 L115.2 38.3 L113.1 38.8 L111.0 39.4 L109.0 40.0 L107.1 40.7 L105.1 41.4 L103.3 42.1 L101.4 42.9 L99.6 43.7 L97.9 44.5 L96.1 45.4 L94.5 46.3 L92.8 47.3 L91.3 48.3 L89.8 49.3 L88.3 50.4 L86.9 51.5 L85.5 52.7 L84.2 53.9 L83.0 55.1 L81.8 56.4 L80.7 57.8 L79.6 59.1 L78.6 60.5 L77.8 62.0 L76.9 63.5 L76.2 65.0 L75.6 66.6 L75.0 68.2 L74.6 69.9 L74.3 71.5 L74.0 73.2 L73.9 74.9 L73.9 76.7 L74.0 78.4 L74.2 80.1 L74.5 81.8 L74.9 83.5 L75.5 85.2 L76.1 86.8 L76.8 88.5 L77.7 90.1 L78.6 91.7 L79.6 93.3 L80.7 94.8 L81.9 96.4 L83.2 97.9 L84.6 99.4 L86.0 100.9 L87.9 102.6 L89.8 104.0 L91.3 105.1 L92.7 106.2 L94.1 107.3 L95.4 108.4 L96.7 109.5 L97.9 110.6 L99.1 111.8 L100.2 112.9 L101.3 114.1 L102.4 115.3 L103.4 116.4 L104.3 117.6 L105.2 118.8 L106.1 120.0 L106.9 121.2 L107.6 122.4 L108.3 123.6 L109.0 124.8 L109.6 126.0 L110.1 127.2 L110.7 128.4 L111.1 129.6 L111.5 130.8 L111.9 132.0 L112.2 133.2 L112.5 134.4 L112.7 135.6 L112.9 136.8 L113.0 138.0 L113.0 139.2 L113.1 140.4 L113.0 141.6 L112.9 142.8 L112.8 144.0 L112.6 145.2 L112.3 146.4 L112.0 147.6 L111.7 148.8 L111.3 149.9 L110.8 151.1 L110.2 152.3 L109.7 153.5 L109.0 154.6 L108.3 155.8 L107.5 156.9 L106.7 158.0 L105.8 159.2 L104.8 160.3 L103.7 161.4 L102.6 162.5 L101.5 163.5 L100.2 164.6 L98.9 165.6 L97.6 166.6 L96.1 167.6 L94.6 168.6 L93.0 169.5 L91.4 170.4 L89.7 171.3 L90.3 172.7 L92.1 171.9 L93.9 171.2 L95.6 170.4 L97.3 169.5 L98.9 168.7 L100.4 167.8 L101.9 166.8 L103.3 165.9 L104.7 164.9 L106.0 163.9 L107.3 162.8 L108.5 161.8 L109.6 160.7 L110.7 159.5 L111.7 158.4 L112.7 157.2 L113.6 155.9 L114.5 154.7 L115.3 153.4 L116.0 152.1 L116.7 150.8 L117.3 149.5 L117.9 148.1 L118.4 146.7 L118.8 145.3 L119.2 143.9 L119.5 142.4 L119.7 141.0 L119.9 139.5 L120.0 138.0 L120.1 136.5 L120.1 135.0 L120.0 133.5 L119.9 131.9 L119.7 130.4 L119.4 128.8 L119.1 127.3 L118.8 125.7 L118.3 124.2 L117.8 122.6 L117.3 121.1 L116.6 119.5 L116.0 118.0 L115.2 116.4 L114.4 114.9 L113.6 113.4 L112.7 111.8 L111.7 110.3 L110.7 108.8 L109.6 107.3 L108.4 105.8 L107.3 104.4 L106.0 102.9 L104.7 101.4 L103.3 100.0 L101.9 98.6 L100.5 97.2 L98.9 95.8 L97.4 94.4 L96.1 93.4 L95.3 92.3 L94.2 91.0 L93.3 89.8 L92.5 88.6 L91.7 87.4 L91.1 86.2 L90.6 85.1 L90.1 84.0 L89.7 83.0 L89.5 82.0 L89.2 81.1 L89.1 80.2 L89.0 79.3 L89.0 78.5 L89.0 77.8 L89.1 77.0 L89.2 76.3 L89.4 75.6 L89.6 74.9 L89.9 74.3 L90.1 73.6 L90.5 73.0 L90.9 72.3 L91.3 71.7 L91.8 71.1 L92.3 70.4 L92.9 69.8 L93.6 69.1 L94.3 68.5 L95.0 67.9 L95.9 67.2 L96.7 66.6 L97.7 66.0 L98.6 65.4 L99.7 64.8 L100.8 64.2 L101.9 63.6 L103.1 63.1 L104.4 62.5 L105.7 62.0 L107.1 61.5 L108.5 61.0 L109.9 60.6 L111.4 60.1 L112.9 59.7 L114.5 59.3 L116.1 59.0 L117.8 58.6 L119.5 58.3 L121.2 58.1 L122.9 57.8 L124.7 57.6 L126.5 57.4 L128.4 57.3 L130.3 57.1 L132.2 57.0 L134.1 57.0 L136.0 57.0 L138.0 57.0 L140.1 57.0Z" fill="#22C55E"/></g></svg><h1>MAS</h1><p>Phần mềm quản lý bán hàng cho cửa hàng. Tải về và cài, dùng được khi mất mạng.</p></header>
+<main>
+<div class="warn" id="inapp"><b>Bạn đang mở trong ứng dụng khác (Zalo, Facebook…).</b> Hãy bấm nút <b>Sao chép đường dẫn</b> bên dưới rồi dán vào <b id="brw">Safari hoặc Chrome</b> để cài được. <br><button class="btn alt" id="copy">Sao chép đường dẫn</button></div>
+
+<section class="card" id="ios"><h2>iPhone, iPad<span class="tag">Dành cho máy của bạn</span></h2>
+<p class="s">Cài từ web, không cần App Store. Dùng trình duyệt <b>Safari</b>.</p>
+<ol><li>Mở trang này bằng <b>Safari</b>.</li><li>Bấm nút <b>Chia sẻ</b> (ô vuông có mũi tên lên) ở thanh dưới.</li><li>Kéo menu lên, chọn <b>Thêm vào MH chính</b>, rồi bấm <b>Thêm</b>.</li><li>Mở biểu tượng <b>MAS</b> ở màn hình chính.</li></ol>
+<p><a class="btn" href="app/">Mở MAS thử</a></p>
+<hr style="border:0;border-top:1px solid #CBD5E1;margin:16px 0">
+<h3 style="margin:0 0 4px;font-size:16px">Hoặc cài app thật bằng file (không qua Safari)</h3>
+<p class="s">Cần một máy tính (Windows hoặc Mac) và Apple ID miễn phí. App cài kiểu này <b>hết hạn sau 7 ngày</b> và phải cài lại bằng cùng cách.</p>
+<ol><li>Tải file <a id="ipa" href="#">MAS-iPhone.ipa</a> về máy tính.</li><li>Cài phần mềm miễn phí <b>Sideloadly</b> (hoặc AltStore) trên máy tính.</li><li>Cắm iPhone vào máy tính, kéo file .ipa vào Sideloadly, nhập Apple ID, bấm <b>Start</b>.</li><li>Trên iPhone: Cài đặt, Cài đặt chung, VPN và quản lý thiết bị, chọn Apple ID của bạn, bấm <b>Tin cậy</b>. Từ iOS 16 còn phải bật <b>Chế độ nhà phát triển</b> trong Quyền riêng tư và bảo mật.</li></ol></section>
+
+<section class="card" id="android"><h2>Android, máy POS Android<span class="tag">Dành cho máy của bạn</span></h2>
+<p class="s">Cách tốt nhất: cài từ Chrome, có in bill và lưu file đầy đủ.</p>
+<button class="btn" data-install>Cài MAS</button>
+<p class="note" data-noinstall>Nếu nút chưa cài được: mở bằng Chrome, bấm ba chấm, chọn <b>Cài đặt ứng dụng</b>.</p>
+<p style="margin-top:10px"><a class="btn alt" id="apk" href="#">Tải file APK</a></p>
+<p class="note">File APK: máy sẽ hỏi cho phép cài từ nguồn này, hãy đồng ý. Bản APK chưa hỗ trợ in bill.</p></section>
+
+<section class="card" id="win"><h2>Windows, máy POS Windows<span class="tag">Dành cho máy của bạn</span></h2>
+<p class="s">Tải file cài đặt rồi bấm đúp.</p>
+<a class="btn" id="winb" href="#">Tải cho Windows</a><button class="btn alt" data-install>Cài từ trình duyệt</button>
+<p class="note">Nếu hiện “Windows đã bảo vệ PC của bạn”: bấm <b>Thông tin thêm</b>, rồi <b>Vẫn chạy</b>.</p></section>
+
+<section class="card" id="mac"><h2>Mac<span class="tag">Dành cho máy của bạn</span></h2>
+<p class="s">Tải file, mở ra, kéo MAS vào Ứng dụng.</p>
+<a class="btn" id="macb" href="#">Tải cho Mac chip Apple (M1 trở lên)</a><a class="btn alt" id="macx" href="#">Mac chip Intel</a><button class="btn alt" data-install>Cài từ trình duyệt</button>
+<p class="note">Lần đầu mở: bấm chuột phải vào MAS, chọn <b>Mở</b>, rồi <b>Mở</b> lần nữa.</p></section>
+
+<p class="note">Dữ liệu lưu trên từng thiết bị, không tự đồng bộ. Vào <b>Cài đặt, Sao lưu ra file</b> thường xuyên.</p>
+</main>
+<footer>© 2026 Nguyễn Tấn Tài (Missing). Dùng miễn phí cho cửa hàng của bạn, không được bán lại hay phân phối lại.</footer>
+<script>
+// Đổi REPO nếu kho công khai đặt tên khác
+var REPO = 'taitan0118/MAS-tai-ve', REL = 'https://github.com/' + REPO + '/releases/latest/download/';
+document.getElementById('ipa').href = REL + 'MAS-iPhone.ipa';
+document.getElementById('apk').href = REL + 'MAS-Android.apk';
+document.getElementById('winb').href = REL + 'MAS-Windows.exe';
+document.getElementById('macb').href = REL + 'MAS-Mac-arm64.dmg';
+document.getElementById('macx').href = REL + 'MAS-Mac-x64.dmg';
+var ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+var and = /Android/.test(ua), win = /Windows/.test(ua), mac = /Macintosh/.test(ua) && !ios;
+var me = ios ? 'ios' : and ? 'android' : win ? 'win' : mac ? 'mac' : '';
+var secs = ['ios', 'android', 'win', 'mac'], main = document.querySelector('main');
+if (me) { var el = document.getElementById(me); el.classList.add('me'); main.insertBefore(el, main.children[1]); }
+var inapp = /FBAN|FBAV|Zalo|Instagram|Line\/|MicroMessenger|; wv\)/.test(ua);
+if (inapp) { document.getElementById('inapp').style.display = 'block'; document.getElementById('brw').textContent = ios ? 'Safari' : 'Chrome'; }
+document.getElementById('copy').onclick = function () { var b = this; (navigator.clipboard ? navigator.clipboard.writeText(location.href) : Promise.reject()).then(function () { b.textContent = 'Đã sao chép'; }, function () { prompt('Sao chép đường dẫn:', location.href); }); };
+var dp = null, btns = document.querySelectorAll('[data-install]'), hints = document.querySelectorAll('[data-noinstall]');
+btns.forEach(function (b) { b.style.display = 'none'; });
+window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); dp = e; btns.forEach(function (b) { b.style.display = ''; }); hints.forEach(function (h) { h.style.display = 'none'; }); });
+btns.forEach(function (b) { b.onclick = function () { if (dp) dp.prompt(); }; });
+window.addEventListener('appinstalled', function () { btns.forEach(function (b) { b.textContent = 'Đã cài xong'; b.disabled = true; }); });
+</script></body></html>
