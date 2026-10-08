@@ -729,99 +729,11 @@ const initials = name => { const w = String(name).trim().split(/\s+/); return ((
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const startOfDay = () => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()).getTime(); };
 
-// Deterministic sample data so every test starts from the same numbers.
+// Dữ liệu ban đầu để trống: cửa hàng tự thêm hàng hóa, khách hàng, khuyến mãi.
 function seed() {
-  let z = 20261006;
-  const r = () => { z = (z + 0x6D2B79F5) | 0; let t = Math.imul(z ^ (z >>> 15), 1 | z); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-  const now = Date.now(), today = startOfDay();
-  // [mã, tên, nhóm, giá vốn, giá bán, tồn hiện tại, độ bán chạy]
-  const P0 = [
-    ['SP001', 'Mì gói tôm chua cay', 'Đồ ăn', 3800, 4500, 48, 9], ['SP002', 'Bánh quy hộp 300g', 'Đồ ăn', 38000, 45000, 12, 2],
-    ['SP003', 'Nước suối 500ml', 'Đồ uống', 3500, 5000, 60, 9], ['SP004', 'Nước ngọt lon 330ml', 'Đồ uống', 8000, 10000, 36, 10],
-    ['SP005', 'Trứng gà vỉ 10', 'Đồ ăn', 28000, 32000, 4, 5], ['SP006', 'Sữa tươi hộp 180ml', 'Đồ uống', 6500, 8000, 24, 6],
-    ['SP007', 'Dầu ăn 1L', 'Gia vị', 46000, 52000, 9, 3], ['SP008', 'Nước mắm 500ml', 'Gia vị', 32000, 38000, 3, 3],
-    ['SP009', 'Đường cát 1kg', 'Gia vị', 21000, 25000, 15, 3], ['SP010', 'Gạo thơm 5kg', 'Đồ ăn', 108000, 125000, 7, 2],
-    ['SP011', 'Bột giặt 800g', 'Gia dụng', 38500, 45000, 10, 2], ['SP012', 'Nước rửa chén 750ml', 'Gia dụng', 23000, 28000, 2, 2],
-    ['SP013', 'Mì ly thịt bằm', 'Đồ ăn', 6500, 8000, 30, 6], ['SP014', 'Phở gói ăn liền', 'Đồ ăn', 5500, 7000, 25, 4],
-    ['SP015', 'Bánh mì sandwich', 'Đồ ăn', 15000, 19000, 8, 3], ['SP016', 'Xúc xích gói 5 cây', 'Đồ ăn', 17000, 21000, 14, 4],
-    ['SP017', 'Cá hộp sốt cà 155g', 'Đồ ăn', 16000, 20000, 18, 2], ['SP018', 'Snack khoai tây 52g', 'Đồ ăn', 9000, 12000, 40, 7],
-    ['SP019', 'Kẹo gói 100g', 'Đồ ăn', 12000, 15000, 22, 3], ['SP020', 'Cà phê lon 235ml', 'Đồ uống', 9000, 12000, 30, 6],
-    ['SP021', 'Trà xanh chai 455ml', 'Đồ uống', 7500, 10000, 42, 8], ['SP022', 'Nước tăng lực lon', 'Đồ uống', 9500, 12000, 28, 6],
-    ['SP023', 'Bia lon 330ml', 'Đồ uống', 14000, 17000, 48, 8], ['SP024', 'Sữa chua lốc 4 hộp', 'Đồ uống', 22000, 27000, 6, 4],
-    ['SP025', 'Cà phê hòa tan hộp 20 gói', 'Đồ uống', 42000, 50000, 9, 2], ['SP026', 'Muối i-ốt 500g', 'Gia vị', 4500, 6000, 26, 2],
-    ['SP027', 'Bột ngọt 400g', 'Gia vị', 26000, 32000, 11, 2], ['SP028', 'Hạt nêm 400g', 'Gia vị', 30000, 36000, 13, 3],
-    ['SP029', 'Nước tương 500ml', 'Gia vị', 14000, 18000, 16, 2], ['SP030', 'Tương ớt chai 250g', 'Gia vị', 9000, 12000, 20, 3],
-    ['SP031', 'Giấy vệ sinh lốc 10 cuộn', 'Gia dụng', 52000, 62000, 8, 2], ['SP032', 'Dầu gội 650ml', 'Gia dụng', 98000, 115000, 5, 1],
-    ['SP033', 'Kem đánh răng 180g', 'Gia dụng', 26000, 32000, 12, 2], ['SP034', 'Xà bông cục 90g', 'Gia dụng', 11000, 14000, 20, 2],
-    ['SP035', 'Khăn giấy hộp', 'Gia dụng', 15000, 19000, 15, 2], ['SP036', 'Nước lau sàn 1L', 'Gia dụng', 29000, 35000, 0, 1],
-    ['SP037', 'Pin tiểu AA vỉ 2', 'Khác', 9000, 12000, 24, 2], ['SP038', 'Bật lửa', 'Khác', 3000, 5000, 50, 4],
-    ['SP039', 'Túi rác cuộn', 'Khác', 12000, 16000, 18, 2], ['SP040', 'Bút bi', 'Khác', 3000, 4000, 35, 2]
-  ];
-  const products = P0.map((p, i) => ({ id: 'p' + (i + 1), sku: p[0], name: p[1], cat: p[2], cost: p[3], price: p[4], stock: p[5] }));
-  const customers = [
-    { id: 'c1', name: 'Chị Lan', phone: '0901 234 567', note: 'Mua sỉ nước ngọt cho quán' },
-    { id: 'c2', name: 'Anh Tuấn', phone: '0912 345 678', note: '' },
-    { id: 'c3', name: 'Cô Ba', phone: '', note: 'Hay ghi sổ, trả cuối tháng' },
-    { id: 'c4', name: 'Chú Hai', phone: '0987 111 222', note: 'Lấy bia cuối tuần' },
-    { id: 'c5', name: 'Chị Mai', phone: '0938 456 789', note: '' },
-    { id: 'c6', name: 'Anh Phong', phone: '0909 876 543', note: 'Công trình đầu hẻm' },
-    { id: 'c7', name: 'Bác Tư', phone: '', note: 'Ghi sổ, con trai trả' },
-    { id: 'c8', name: 'Em Hằng', phone: '0977 654 321', note: '' }
-  ];
-  const debtors = ['c3', 'c4', 'c7'];
-  const bag = []; P0.forEach((p, i) => { for (let k = 0; k < p[6]; k++) bag.push(i); });
-  const hours = [6, 6, 7, 7, 7, 8, 9, 10, 11, 11, 12, 13, 15, 16, 17, 17, 18, 18, 18, 19, 19, 20, 20, 21];
-  const raw = [];
-  for (let k = 179; k >= 0; k--) {
-    const day = today - k * DAY, wd = new Date(day).getDay(), n = 14 + Math.floor(r() * 13) + (wd === 0 || wd === 6 ? 8 : 0) + (k < 30 ? 4 : 0);
-    for (let j = 0; j < n; j++) {
-      const time = day + hours[Math.floor(r() * hours.length)] * 36e5 + Math.floor(r() * 3600) * 1000;
-      if (time > now) continue;
-      const lines = {}, m = 1 + Math.floor(r() * r() * 5);
-      for (let x = 0; x < m; x++) { const pi = bag[Math.floor(r() * bag.length)]; lines[pi] = (lines[pi] || 0) + (P0[pi][4] > 40000 ? 1 : 1 + Math.floor(r() * r() * 4)); }
-      raw.push({ time, lines });
-    }
-  }
-  raw.sort((a, b) => a.time - b.time);
-  const orders = raw.map((x, idx) => {
-    const items = Object.keys(x.lines).map(pi => { const p = products[pi]; return { pid: p.id, name: p.name, price: p.price, cost: p.cost, qty: x.lines[pi], disc: p.id === 'p1' ? 500 : 0 }; });
-    const subtotal = items.reduce((t, i) => t + i.price * i.qty, 0), promoItem = items.reduce((t, i) => t + i.disc * i.qty, 0);
-    const promoOrder = subtotal - promoItem >= 200000 ? Math.round((subtotal - promoItem) * 0.05) : 0;
-    const total = subtotal - promoItem - promoOrder;
-    const names = (promoItem ? ['Mì gói giảm 500đ'] : []).concat(promoOrder ? ['Giảm 5% đơn từ 200.000đ'] : []);
-    const c = r() < 0.3 ? customers[Math.floor(r() * customers.length)] : null;
-    const q = r();
-    const method = c && debtors.includes(c.id) && q < 0.45 ? 'debt' : q < 0.6 ? 'cash' : q < 0.9 ? 'transfer' : 'card';
-    const step = r() < 0.5 ? 10000 : 50000, given = method === 'cash' ? Math.ceil(total / step) * step : method === 'debt' ? 0 : total;
-    const paid = method === 'debt' ? 0 : total;
-    return { id: 'o' + (idx + 1), no: idx + 1, time: x.time, cashier: r() < 0.7 ? 'Thu ngân 1' : 'Thu ngân 2', customerId: c ? c.id : null, customerName: c ? c.name : '',
-      items, subtotal, promoItem, promoOrder, promoNames: names, discount: 0, total,
-      method, given, paid, change: method === 'cash' ? given - total : 0, debt: total - paid, voided: r() < 0.02 };
-  });
-  const cash = [];
-  const add = (time, type, amount, cat, method, note, customerId) => { if (time <= now) cash.push(Object.assign({ id: 'k' + (cash.length + 1), time, type, amount, cat, method, note }, customerId ? { customerId } : {})); };
-  for (let k = 179; k >= 0; k--) {
-    const day = today - k * DAY, d = new Date(day);
-    add(day + 6 * 36e5, 'in', 500000, 'Tiền đầu ca', 'cash', 'Tiền lẻ để thối');
-    if (d.getDay() === 1) add(day + 9 * 36e5, 'out', 2500000 + Math.round(r() * 20) * 100000, 'Nhập hàng', 'transfer', 'Nhập hàng đại lý tuần');
-    if (d.getDate() === 5) { add(day + 10 * 36e5, 'out', 4000000, 'Mặt bằng', 'transfer', 'Tiền thuê mặt bằng'); add(day + 11 * 36e5, 'out', 650000 + Math.round(r() * 30) * 10000, 'Điện nước', 'transfer', 'Tiền điện nước'); }
-    if (d.getDate() === 10) add(day + 18 * 36e5, 'out', 5000000, 'Lương nhân viên', 'cash', 'Lương Thu ngân 2');
-    if (r() < 0.08) add(day + 15 * 36e5, 'out', 50000 + Math.round(r() * 10) * 10000, 'Chi khác', 'cash', 'Mua đá, túi nilon');
-  }
-  // Debtors paid back part of what they owed more than two weeks ago.
-  for (const cid of debtors) {
-    const old = orders.filter(o => o.customerId === cid && !o.voided && o.debt && o.time < today - 14 * DAY).reduce((t, o) => t + o.debt, 0);
-    const back = Math.round(old * 0.7 / 1000) * 1000, c = customers.find(x => x.id === cid);
-    if (back) add(today - 12 * DAY + 17 * 36e5, 'in', back, 'Thu nợ', 'cash', 'Thu nợ ' + c.name, cid);
-  }
-  cash.sort((a, b) => a.time - b.time);
   return {
-    settings: { storeName: 'Tạp hóa MAS', address: '12 Nguyễn Trãi, Phường 2', phone: '0909 000 111', cashier: 'Thu ngân 1', theme: 'light' },
-    cats: CATS.slice(), products, customers, orders: orders.reverse(), nextNo: orders.length + 1, cash,
-    promos: [
-      { id: 'm1', name: 'Giảm 5% đơn từ 200.000đ', kind: 'order', mode: 'pct', value: 5, min: 200000, active: true },
-      { id: 'm2', name: 'Mì gói giảm 500đ', kind: 'item', mode: 'amt', value: 500, pid: 'p1', active: true }
-    ],
+    settings: { storeName: 'Cửa hàng của bạn', address: '', phone: '', cashier: 'Thu ngân 1', theme: 'light' },
+    cats: CATS.slice(), products: [], customers: [], orders: [], nextNo: 1, cash: [], promos: [],
     cart: { lines: {}, discount: 0, customerId: null }
   };
 }
@@ -891,7 +803,7 @@ const CONFIRMS = {
   delc: { title: 'Xóa khách hàng này?', msg: 'Thông tin khách sẽ bị xóa khỏi danh sách.', ok: 'Xóa khách' },
   delk: { title: 'Xóa phiếu này?', msg: 'Phiếu thu chi sẽ bị xóa và số tiền còn lại thay đổi theo.', ok: 'Xóa phiếu' },
   delm: { title: 'Xóa khuyến mãi này?', msg: 'Chương trình sẽ bị xóa. Các đơn cũ vẫn giữ nguyên.', ok: 'Xóa khuyến mãi' },
-  reset: { title: 'Khôi phục dữ liệu mẫu?', msg: 'Toàn bộ đơn hàng, khách hàng, sổ quỹ và hàng hóa bạn đã tạo sẽ bị xóa. Nên sao lưu ra file trước.', ok: 'Khôi phục' },
+  reset: { title: 'Xóa toàn bộ dữ liệu?', msg: 'Toàn bộ đơn hàng, khách hàng, sổ quỹ và hàng hóa bạn đã tạo sẽ bị xóa, app trở về trống. Nên sao lưu ra file trước. App tự giữ một bản dự phòng trước khi xóa.', ok: 'Xóa hết' },
   del: { title: 'Xóa hàng này?', msg: 'Hàng sẽ bị xóa khỏi danh sách. Các đơn cũ vẫn giữ nguyên.', ok: 'Xóa hàng' }
 };
 const findP = id => S.products.find(p => p.id === id) || null;
@@ -1015,8 +927,8 @@ function renderGrid() {
   const g = $('#grid'); if (!g) return;
   const list = filteredProducts();
   if (!list.length) {
-    g.innerHTML = '<div class="empty">' + (S.products.length ? `Không có hàng nào khớp "${esc(ui.q)}". Thử từ khóa khác hoặc chọn nhóm Tất cả.` : 'Chưa có hàng hóa nào.') +
-      `<br><button type="button" class="btn sm" data-act="newprod">${svg(I.plus, 18)}Thêm hàng mới</button></div>`;
+    g.innerHTML = '<div class="empty">' + (S.products.length ? `Không có hàng nào khớp "${esc(ui.q)}". Thử từ khóa khác hoặc chọn nhóm Tất cả.` : 'Chưa có hàng hóa nào. Thêm từng món hoặc nhập nhiều hàng một lần từ file Excel.') +
+      `<br><button type="button" class="btn sm" data-act="importx">Nhập từ Excel</button> <button type="button" class="btn sm" data-act="newprod">${svg(I.plus, 18)}Thêm hàng mới</button></div>`;
     return;
   }
   g.innerHTML = list.map(p => {
@@ -1183,6 +1095,7 @@ function receiptModal(d) {
     (IS_APP ? '' : '<p class="muted sm">Bill xem trước khổ 58mm. Bản app cài trên máy sẽ in ra máy in nhiệt.</p>') +
     '<div class="dactions">' +
     (!o.voided && !d.fresh ? `<button type="button" class="btn danger" data-act="void" data-id="${o.id}">${ui.arm === 'void' + o.id ? 'Bấm lần nữa để hủy đơn' : 'Hủy đơn'}</button>` : '') +
+    (!d.fresh ? `<button type="button" class="btn danger" data-act="delorder" data-id="${o.id}">Xóa hóa đơn</button>` : '') +
     (IS_APP ? `<button type="button" class="btn" data-act="print" data-id="${o.id}">${svg(I.printer, 20)}In bill</button>` : '') +
     (d.fresh ? '<button type="button" class="btn primary grow" data-act="newsale" autofocus>Đơn mới</button>' : '<button type="button" class="btn primary grow" data-act="close">Đóng</button>') +
     '</div>';
@@ -1191,6 +1104,12 @@ function printOrder(id) {
   const o = findO(id); if (!o) return;
   $('#print-area').innerHTML = receiptHTML(o);
   window.print();
+}
+function deleteOrder(id) {
+  const o = findO(id); if (!o) return;
+  if (!o.voided) o.items.forEach(i => { const p = findP(i.pid); if (p) p.stock += i.qty; });
+  S.orders = S.orders.filter(x => x.id !== id); save(); closeModal(); render();
+  toast(`Đã xóa hóa đơn ${orderNo(o.no)}.`);
 }
 function voidOrder(id) {
   const o = findO(id); if (!o || o.voided) return;
@@ -1447,7 +1366,7 @@ function custModal(d) {
       '</div><button type="submit" class="btn primary">Ghi nhận thu nợ</button></form>' : '') +
     `<div><h3 class="h2" style="font-size:16px;margin-bottom:6px">Lịch sử</h3><div class="hist">${hist || '<p class="muted">Khách chưa mua đơn nào.</p>'}</div></div>` +
     '<div class="dactions">' +
-    (s.debt === 0 && !s.count ? `<button type="button" class="btn danger" data-act="delcust" data-id="${c.id}">${ui.arm === 'delc' + c.id ? 'Bấm lần nữa để xóa' : 'Xóa khách'}</button>` : '') +
+    `<button type="button" class="btn danger" data-act="delcust" data-id="${c.id}">Xóa khách</button>` +
     `<button type="button" class="btn" data-act="editcust" data-id="${c.id}">Sửa thông tin</button>` +
     `<button type="button" class="btn primary grow" data-act="sellto" data-id="${c.id}">Bán hàng cho khách này</button></div>`;
 }
@@ -1818,14 +1737,14 @@ function viewSettings() {
     '<div class="row-gap" style="margin-bottom:18px"><button type="button" class="btn" data-act="exportall">Xuất toàn bộ dữ liệu ra Excel</button></div>' +
     '<h3 class="b" style="margin-bottom:4px">Bản dự phòng tự động</h3><p class="muted sm" style="margin-bottom:10px">App tự lưu một bản trên máy này mỗi ngày và trước khi nhập hàng, khôi phục hay xóa dữ liệu. Giữ ' + SNAPKEEP + ' bản mới nhất. Nếu xóa dữ liệu trình duyệt thì các bản này cũng mất, nên vẫn cần sao lưu ra file.</p>' +
     '<div id="snap-list" style="margin-bottom:10px"></div><div class="row-gap" style="margin-bottom:18px"><button type="button" class="btn" data-act="snapnow">Lưu bản dự phòng ngay</button></div>' +
-    '<p class="muted sm" style="margin-bottom:10px">Khôi phục dữ liệu mẫu sẽ xóa đơn hàng, khách hàng, sổ quỹ đã tạo và đưa mọi thứ về dữ liệu ban đầu.</p>' +
-    `<button type="button" class="btn danger" data-act="reset">${ui.arm === 'reset' ? 'Bấm lần nữa để khôi phục' : 'Khôi phục dữ liệu mẫu'}</button></div></div>`;
+    '<p class="muted sm" style="margin-bottom:10px">Xóa toàn bộ dữ liệu sẽ xóa hàng hóa, đơn hàng, khách hàng, sổ quỹ đã tạo và đưa app về trống như mới cài.</p>' +
+    `<button type="button" class="btn danger" data-act="reset">${ui.arm === 'reset' ? 'Bấm lần nữa để xóa' : 'Xóa toàn bộ dữ liệu'}</button></div></div>`;
 }
 function submitSettings(form) {
   const v = formVals(form);
   if (v.phone.trim() && !/^[\d\s.+-]{8,15}$/.test(v.phone.trim())) return toast('Số điện thoại chỉ gồm chữ số, từ 8 đến 15 ký tự.', 'warn');
   if (v.storeName.length > 60) return toast('Tên cửa hàng tối đa 60 ký tự.', 'warn');
-  Object.assign(S.settings, { storeName: v.storeName.trim() || 'MAS Demo', address: v.address.trim(), phone: v.phone.trim(), cashier: v.cashier.trim() || 'Thu ngân 1', theme: 'light' });
+  Object.assign(S.settings, { storeName: v.storeName.trim() || 'Cửa hàng của bạn', address: v.address.trim(), phone: v.phone.trim(), cashier: v.cashier.trim() || 'Thu ngân 1', theme: 'light' });
   save(); applyTheme(); render(); toast('Đã lưu cài đặt.');
 }
 async function backup() {
@@ -2052,6 +1971,8 @@ document.addEventListener('click', e => {
     case 'close': case 'overlay': closeModal(); break;
     case 'newsale': closeModal(); ui.view = 'pos'; render(); break;
     case 'print': printOrder(id); break;
+    case 'delorder': { const o = findO(id); if (!o) break;
+      ask({ title: `Xóa hóa đơn ${orderNo(o.no)}?`, msg: o.voided ? 'Hóa đơn đã hủy sẽ bị xóa hẳn khỏi lịch sử. Không hoàn tác được.' : 'Hóa đơn sẽ bị xóa hẳn. Hàng trong đơn được trả lại kho, tiền thu, công nợ và doanh thu của đơn không còn tính nữa. Không hoàn tác được. Nếu chỉ muốn giữ lại lịch sử thì chọn Hủy đơn.', ok: 'Xóa hóa đơn' }, () => deleteOrder(id)); break; }
     case 'void': if (!confirm2('void' + id, () => voidOrder(id))) drawModal(); break;
     case 'openorder': openModal('receipt', { id }); break;
     case 'pf': ui.pf = v; render(); break;
@@ -2074,7 +1995,15 @@ document.addEventListener('click', e => {
       break;
     case 'opencust': openModal('cust', { id }); break;
     case 'editcust': ui.modal = { kind: 'custform', data: { id } }; drawModal(); break;
-    case 'delcust': if (!confirm2('delc' + id, () => { const c = findC(id); S.customers = S.customers.filter(x => x.id !== id); if (S.cart.customerId === id) S.cart.customerId = null; save(); closeModal(); render(); toast(`Đã xóa khách "${c ? c.name : ''}".`); })) drawModal(); break;
+    case 'delcust': { const c = findC(id); if (!c) break; const st = custStats(id);
+      const msg = (st.debt > 0 ? `Khách đang nợ ${fmt(st.debt)}. Xóa khách thì không còn theo dõi khoản nợ này nữa. ` : '') + (st.count ? `Khách đã mua ${st.count} đơn, các đơn cũ vẫn giữ nguyên trong lịch sử. ` : '') + 'Thông tin khách sẽ bị xóa khỏi danh sách.';
+      ask({ title: `Xóa khách "${c.name}"?`, msg, ok: 'Xóa khách' }, () => {
+        S.customers = S.customers.filter(x => x.id !== id);
+        S.orders.forEach(o => { if (o.customerId === id) o.customerId = null; });
+        S.cash.forEach(k => { if (k.customerId === id) k.customerId = null; });
+        if (S.cart.customerId === id) S.cart.customerId = null;
+        save(); closeModal(); render(); toast(`Đã xóa khách "${c.name}".`);
+      }); break; }
     case 'sellto': S.cart.customerId = id; save(); closeModal(); ui.view = 'pos'; render(); toast(`Đang bán cho ${findC(id).name}.`); break;
     case 'cf': ui.cf = v; render(); break;
     /* fund */
