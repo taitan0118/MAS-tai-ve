@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="vi">
+<html lang="vi" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -816,7 +816,7 @@ function seed() {
   }
   cash.sort((a, b) => a.time - b.time);
   return {
-    settings: { storeName: 'Tạp hóa MAS', address: '12 Nguyễn Trãi, Phường 2', phone: '0909 000 111', cashier: 'Thu ngân 1', theme: 'auto' },
+    settings: { storeName: 'Tạp hóa MAS', address: '12 Nguyễn Trãi, Phường 2', phone: '0909 000 111', cashier: 'Thu ngân 1', theme: 'light' },
     cats: CATS.slice(), products, customers, orders: orders.reverse(), nextNo: orders.length + 1, cash,
     promos: [
       { id: 'm1', name: 'Giảm 5% đơn từ 200.000đ', kind: 'order', mode: 'pct', value: 5, min: 200000, active: true },
@@ -867,8 +867,7 @@ const I = {
 };
 
 function applyTheme() {
-  const t = S.settings.theme, r = document.documentElement;
-  if (t === 'light' || t === 'dark') r.setAttribute('data-theme', t); else r.removeAttribute('data-theme');
+  document.documentElement.setAttribute('data-theme', 'light'); // chỉ có chế độ sáng
 }
 let tt;
 const TICON = { ok: '✓', warn: '!', err: '✕', info: 'i' };
@@ -1806,7 +1805,6 @@ function viewSettings() {
     field('address', 'Địa chỉ', st.address, null, { wide: true, placeholder: 'Số nhà, đường, phường' }) +
     field('phone', 'Số điện thoại', st.phone, null, { type: 'tel', placeholder: '09xx xxx xxx' }) +
     field('cashier', 'Tên thu ngân', st.cashier, null, {}) +
-    selectField('theme', 'Giao diện', [['auto', 'Theo máy'], ['light', 'Sáng'], ['dark', 'Tối']], st.theme) +
     '</div><div class="dactions" style="margin-top:16px"><button type="submit" class="btn primary">Lưu cài đặt</button></div></form>' +
     '<div class="panel"><h2 class="h2">Logo Missing</h2><p class="muted" style="margin-bottom:14px">Xem lại hiệu ứng mở màn, có âm thanh và giọng "Mít xinh!".</p><button type="button" class="btn" data-act="logo">Phát hiệu ứng logo</button></div>' +
     '<div class="panel"><h2 class="h2">Giới thiệu và giấy phép</h2><p style="margin-bottom:6px"><b>MAS</b> (Missing App Sales), phần mềm quản lý bán hàng cho cửa hàng nhỏ, tạp hóa.</p>' +
@@ -1827,7 +1825,7 @@ function submitSettings(form) {
   const v = formVals(form);
   if (v.phone.trim() && !/^[\d\s.+-]{8,15}$/.test(v.phone.trim())) return toast('Số điện thoại chỉ gồm chữ số, từ 8 đến 15 ký tự.', 'warn');
   if (v.storeName.length > 60) return toast('Tên cửa hàng tối đa 60 ký tự.', 'warn');
-  Object.assign(S.settings, { storeName: v.storeName.trim() || 'MAS Demo', address: v.address.trim(), phone: v.phone.trim(), cashier: v.cashier.trim() || 'Thu ngân 1', theme: v.theme });
+  Object.assign(S.settings, { storeName: v.storeName.trim() || 'MAS Demo', address: v.address.trim(), phone: v.phone.trim(), cashier: v.cashier.trim() || 'Thu ngân 1', theme: 'light' });
   save(); applyTheme(); render(); toast('Đã lưu cài đặt.');
 }
 async function backup() {
