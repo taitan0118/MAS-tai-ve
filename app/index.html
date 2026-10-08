@@ -164,6 +164,9 @@ textarea.input{padding:12px 14px;min-height:80px;resize:vertical}
 .toolbar .search{min-height:44px;width:320px;max-width:100%}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
 .panel > .h2{margin-bottom:12px}
+.snap{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.impbad{background:var(--warn-bg);color:var(--warn-text);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13px;display:grid;gap:2px}
+.impprev{display:grid;gap:6px;margin-bottom:14px}
 .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
 
 .table{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow-x:auto}
@@ -986,6 +989,7 @@ function render() {
   if (ui.view === 'products') renderPTable();
   if (ui.view === 'orders') renderOList();
   if (ui.view === 'customers') renderCTable();
+  if (ui.view === 'settings') drawSnaps();
 }
 const refreshPOS = () => { if (ui.view === 'pos') { renderGrid(); renderCart(); } };
 
@@ -1217,7 +1221,7 @@ function viewProducts() {
   const val = P.reduce((s, p) => s + p.cost * Math.max(0, p.stock), 0);
   const tabs = [['all', `Tất cả (${P.length})`], ['low', `Sắp hết (${low})`], ['out', `Hết hàng (${out})`]];
   return `<div class="page"><div class="phead"><div><h1 class="h1">Hàng hóa</h1><p class="muted">Giá trị tồn kho theo giá vốn: ${fmt(val)}</p></div>` +
-    `<div class="row-gap"><button type="button" class="btn" data-act="cats">Nhóm hàng</button><button type="button" class="btn" data-act="stockin">Nhập kho</button><button type="button" class="btn primary" data-act="newprod">${svg(I.plus, 20)}Thêm hàng</button></div></div>` +
+    `<div class="row-gap"><button type="button" class="btn" data-act="cats">Nhóm hàng</button><button type="button" class="btn" data-act="stockin">Nhập kho</button><button type="button" class="btn" data-act="importx">Nhập Excel</button><button type="button" class="btn primary" data-act="newprod">${svg(I.plus, 20)}Thêm hàng</button></div></div>` +
     '<div class="toolbar"><div class="chips" role="group" aria-label="Lọc hàng hóa">' + tabs.map(t =>
       `<button type="button" class="chip" data-act="pf" data-v="${t[0]}" aria-pressed="${ui.pf === t[0]}">${t[1]}</button>`).join('') +
     `</div><div class="search">${svg(I.search, 18)}<label for="pq" class="sr">Tìm hàng hóa</label><input id="pq" type="search" autocomplete="off" placeholder="Tìm tên hoặc mã hàng" value="${esc(ui.pq)}" data-input="pq"></div></div>` +
@@ -1669,28 +1673,85 @@ function zipStore(files) {
 }
 const xe = v => String(v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
 const colName = i => { let n = ''; for (i++; i; i = Math.floor((i - 1) / 26)) n = String.fromCharCode(65 + (i - 1) % 26) + n; return n; };
-// sheets: [{ name, cols: [width...], rows: [[cell...]] }]; row 1 is the bold header, numbers show as 1.234.567
+// sheets: [{ name, tab, title, sub, head, types, cols, rows, total, land, filter, freeze }]
+// types theo cột: t chữ, c giữa ô, n số đếm, m tiền (đ). Một ô có thể là { v, t } để đổi kiểu. total = danh sách cột cần cộng.
 function xlsxBlob(sheets) {
-  const sheetXml = sh => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
-    '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' +
-    '<cols>' + sh.cols.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('') + '</cols><sheetData>' +
-    sh.rows.map((row, ri) => `<row r="${ri + 1}">` + row.map((v, ci) => {
-      const ref = colName(ci) + (ri + 1);
-      if (v === '' || v == null) return '';
-      if (typeof v === 'number' && isFinite(v)) return `<c r="${ref}"${ri ? ' s="2"' : ' s="1"'}><v>${v}</v></c>`;
-      return `<c r="${ref}" t="inlineStr"${ri ? '' : ' s="1"'}><is><t xml:space="preserve">${xe(v)}</t></is></c>`;
-    }).join('') + '</row>').join('') + '</sheetData></worksheet>';
+  const L = { t: [4, 5], c: [10, 11], n: [6, 7], m: [8, 9] }, TOT = { t: 12, c: 12, n: 13, m: 14 };
+  const val = c => (c && typeof c === 'object' ? c.v : c);
+  const sheetXml = (sh, si) => {
+    const n = sh.head.length, last = colName(n - 1), fr = 5, lr = fr + sh.rows.length - 1, out = [];
+    const row = (r, cells, ht) => out.push(`<row r="${r}" ht="${ht}" customHeight="1">${cells}</row>`);
+    const sc = (r, c, v, st) => { const ref = colName(c) + r; return v === '' || v == null ? `<c r="${ref}" s="${st}"/>` : `<c r="${ref}" s="${st}" t="inlineStr"><is><t xml:space="preserve">${xe(v)}</t></is></c>`; };
+    const pad = (r, st) => Array.from({ length: n - 1 }, (_, i) => sc(r, i + 1, '', st)).join('');
+    row(1, sc(1, 0, sh.title, 1) + pad(1, 1), 32);
+    row(2, sc(2, 0, sh.sub, 2) + pad(2, 2), 20);
+    row(4, sh.head.map((h, c) => sc(4, c, h, 3)).join(''), 28);
+    sh.rows.forEach((d, i) => {
+      const r = fr + i;
+      row(r, d.map((c, ci) => {
+        const o = c && typeof c === 'object' ? c : { v: c, t: sh.types[ci] }, st = L[o.t][i % 2];
+        return typeof o.v === 'number' && isFinite(o.v) ? `<c r="${colName(ci) + r}" s="${st}"><v>${o.v}</v></c>` : sc(r, ci, o.v, st);
+      }).join(''), 20);
+    });
+    if (sh.total && sh.rows.length) {
+      const r = lr + 1;
+      row(r, sh.head.map((_, c) => {
+        if (c === 0) return sc(r, 0, 'Tổng cộng', 12);
+        if (!sh.total.includes(c)) return sc(r, c, '', 12);
+        const sum = sh.rows.reduce((t, d) => t + (Number(val(d[c])) || 0), 0), col = colName(c);
+        return `<c r="${col}${r}" s="${TOT[sh.types[c]]}"><f>SUM(${col}${fr}:${col}${lr})</f><v>${sum}</v></c>`;
+      }).join(''), 24);
+    }
+    const cols = sh.head.map((h, c) => {
+      let w = Math.max(sh.cols[c] || 8, String(h).length + 3);
+      for (const d of sh.rows) { const v = val(d[c]); if (v == null) continue; const len = typeof v === 'number' ? v.toLocaleString('vi-VN').length + (sh.types[c] === 'm' ? 3 : 1) : String(v).length + 2; if (len > w) w = len; }
+      return `<col min="${c + 1}" max="${c + 1}" width="${Math.min(w, 46)}" customWidth="1"/>`;
+    }).join('');
+    const freeze = sh.freeze !== false;
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      `<sheetPr><tabColor rgb="${sh.tab || 'FF2563EB'}"/><pageSetUpPr fitToPage="1"/></sheetPr>` +
+      `<sheetViews><sheetView showGridLines="0"${si ? '' : ' tabSelected="1"'} workbookViewId="0">` + (freeze ? '<pane ySplit="4" topLeftCell="A5" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A5" sqref="A5"/>' : '') + '</sheetView></sheetViews>' +
+      '<sheetFormatPr defaultRowHeight="18" customHeight="1"/><cols>' + cols + '</cols><sheetData>' + out.join('') + '</sheetData>' +
+      (sh.filter && sh.rows.length ? `<autoFilter ref="A4:${last}${lr}"/>` : '') +
+      `<mergeCells count="2"><mergeCell ref="A1:${last}1"/><mergeCell ref="A2:${last}2"/></mergeCells>` +
+      '<pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/>' +
+      `<pageSetup paperSize="9" orientation="${sh.land ? 'landscape' : 'portrait'}" fitToWidth="1" fitToHeight="0"/>` +
+      '<headerFooter><oddFooter>&amp;LMAS · Missing App Sales&amp;RTrang &amp;P / &amp;N</oddFooter></headerFooter></worksheet>';
+  };
+  const sname = sh => sh.name.replace(/[\[\]:*?/\\]/g, ' ').slice(0, 31);
+  const font = (x, sz, col) => `<font>${x}<sz val="${sz}"/><color rgb="${col}"/><name val="Calibri"/></font>`;
+  const fill = c => `<fill><patternFill patternType="solid"><fgColor rgb="${c}"/><bgColor indexed="64"/></patternFill></fill>`;
+  const bd = c => `<left style="thin"><color rgb="${c}"/></left><right style="thin"><color rgb="${c}"/></right>`;
+  const xf = (num, f, fl, b, al) => `<xf numFmtId="${num}" fontId="${f}" fillId="${fl}" borderId="${b}" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment ${al}/></xf>`;
+  const V = 'vertical="center"', LF = `horizontal="left" ${V}`, RT = `horizontal="right" ${V}`, CT = `horizontal="center" ${V}`;
+  const styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0&quot; đ&quot;;-#,##0&quot; đ&quot;;&quot;-&quot;"/></numFmts>' +
+    '<fonts count="6">' + font('', 11, 'FF0F172A') + font('<b/>', 11, 'FF0F172A') + font('<b/>', 11, 'FFFFFFFF') + font('<b/>', 16, 'FFFFFFFF') + font('<i/>', 10, 'FF64748B') + font('<b/>', 11, 'FF1E3A8A') + '</fonts>' +
+    '<fills count="6"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' + fill('FF0F172A') + fill('FF2563EB') + fill('FFF1F5F9') + fill('FFDBEAFE') + '</fills>' +
+    '<borders count="3"><border><left/><right/><top/><bottom/><diagonal/></border>' +
+    `<border>${bd('FFCBD5E1')}<top style="thin"><color rgb="FFCBD5E1"/></top><bottom style="thin"><color rgb="FFCBD5E1"/></bottom><diagonal/></border>` +
+    `<border>${bd('FFCBD5E1')}<top style="medium"><color rgb="FF2563EB"/></top><bottom style="medium"><color rgb="FF2563EB"/></bottom><diagonal/></border></borders>` +
+    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="15">' +
+    '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+    xf(0, 3, 2, 0, `${LF} indent="1"`) + xf(0, 4, 0, 0, `${LF} indent="1"`) + xf(0, 2, 3, 1, `${CT} wrapText="1"`) +
+    xf(0, 0, 0, 1, `${LF} indent="1"`) + xf(0, 0, 4, 1, `${LF} indent="1"`) +
+    xf(3, 0, 0, 1, RT) + xf(3, 0, 4, 1, RT) + xf(164, 0, 0, 1, RT) + xf(164, 0, 4, 1, RT) +
+    xf(0, 0, 0, 1, CT) + xf(0, 0, 4, 1, CT) +
+    xf(0, 5, 5, 2, `${LF} indent="1"`) + xf(3, 5, 5, 2, RT) + xf(164, 5, 5, 2, RT) +
+    '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  const R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
   const files = [
     ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
       sheets.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('') + '</Types>'],
-    ['_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
-    ['xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' +
-      sheets.map((sh, i) => `<sheet name="${xe(sh.name.replace(/[\[\]:*?/\\]/g, ' ').slice(0, 31))}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('') + '</sheets></workbook>'],
+    ['_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${R}/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+    ['xl/workbook.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="${R}"><sheets>` +
+      sheets.map((sh, i) => `<sheet name="${xe(sname(sh))}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('') + '</sheets><definedNames>' +
+      sheets.map((sh, i) => sh.freeze === false ? '' : `<definedName name="_xlnm.Print_Titles" localSheetId="${i}">'${xe(sname(sh))}'!$4:$4</definedName>`).join('') + '</definedNames></workbook>'],
     ['xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
-      sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('') +
-      `<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],
-    ['xl/styles.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFDBEAFE"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>']
-  ].concat(sheets.map((sh, i) => [`xl/worksheets/sheet${i + 1}.xml`, sheetXml(sh)]));
+      sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="${R}/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('') +
+      `<Relationship Id="rId${sheets.length + 1}" Type="${R}/styles" Target="styles.xml"/></Relationships>`],
+    ['xl/styles.xml', styles]
+  ].concat(sheets.map((sh, i) => [`xl/worksheets/sheet${i + 1}.xml`, sheetXml(sh, i)]));
   return zipStore(files);
 }
 async function saveFile(filename, blob) {
@@ -1714,16 +1775,23 @@ async function saveFile(filename, blob) {
   catch (err) { if (!err || err.code !== 'declined') toast('Không lưu được file. ' + ((err && err.message) || ''), 'err'); return false; }
 }
 async function exportExcel() {
-  const R = reportData(), [a, b] = R.bounds;
+  const R = reportData(), [a, b] = R.bounds, store = S.settings.storeName || 'MAS', period = `${dshow(a)} đến ${dshow(b - 1)}`;
+  const sub = `${store}  ·  Kỳ báo cáo: ${period}`;
+  const N = v => ({ v, t: 'n' });
   const blob = xlsxBlob([
-    { name: 'Tổng hợp', cols: [22, 28], rows: [['Báo cáo bán hàng', S.settings.storeName], ['Từ ngày', dshow(a)], ['Đến ngày', dshow(b - 1)], [],
-      ['Doanh thu', R.rev], ['Số đơn', R.cnt], ['Lợi nhuận gộp', R.profit], ['Đã giảm cho khách', R.promo], ['Tiền đã thu', R.paid], ['Ghi nợ trong kỳ', R.debt]] },
-    { name: 'Theo ngày', cols: [12, 9, 14, 14], rows: [['Ngày', 'Số đơn', 'Doanh thu', 'Lợi nhuận gộp']].concat(R.days.map(d => [d.label, d.cnt, d.rev, d.profit])) },
-    { name: 'Đơn hàng', cols: [10, 17, 18, 13, 11, 10, 11, 11, 10, 14], rows: [['Số đơn', 'Thời gian', 'Khách hàng', 'Hình thức', 'Tạm tính', 'Giảm giá', 'Tổng tiền', 'Đã trả', 'Ghi nợ', 'Thu ngân']].concat(
-      R.orders.map(o => [orderNo(o.no), fmtTime(o.time), o.customerName || 'Khách lẻ', METHODS[o.method], o.subtotal, o.subtotal - o.total, o.total, o.paid != null ? o.paid : o.total, o.debt || 0, o.cashier])) },
-    { name: 'Chi tiết hàng bán', cols: [10, 17, 26, 9, 10, 17, 12], rows: [['Số đơn', 'Thời gian', 'Hàng hóa', 'Số lượng', 'Đơn giá', 'Khuyến mãi mỗi món', 'Thành tiền']].concat(
-      R.orders.flatMap(o => o.items.map(i => [orderNo(o.no), fmtTime(o.time), i.name, i.qty, i.price, i.disc || 0, (i.price - (i.disc || 0)) * i.qty]))) },
-    { name: 'Bán chạy', cols: [26, 13, 13], rows: [['Hàng hóa', 'Số lượng bán', 'Doanh thu']].concat(R.items.map(t => [t.name, t.qty, t.rev])) }
+    { name: 'Tổng hợp', tab: 'FF2563EB', title: 'BÁO CÁO BÁN HÀNG', sub, head: ['Chỉ số', 'Giá trị'], types: ['t', 'm'], cols: [30, 22], freeze: false, land: false, rows: [
+      ['Doanh thu', R.rev], ['Số đơn', N(R.cnt)], ['Doanh thu trung bình mỗi đơn', R.cnt ? Math.round(R.rev / R.cnt) : 0], ['Lợi nhuận gộp', R.profit],
+      ['Đã giảm cho khách', R.promo], ['Tiền đã thu', R.paid], ['Ghi nợ trong kỳ', R.debt]] },
+    { name: 'Theo ngày', tab: 'FF38BDF8', title: 'DOANH THU THEO NGÀY', sub, head: ['Ngày', 'Số đơn', 'Doanh thu', 'Lợi nhuận gộp'], types: ['c', 'n', 'm', 'm'], cols: [14, 10, 18, 18], filter: true, total: [1, 2, 3],
+      rows: R.days.map(d => [d.label, d.cnt, d.rev, d.profit]) },
+    { name: 'Đơn hàng', tab: 'FF0F172A', title: 'DANH SÁCH ĐƠN HÀNG', sub, head: ['Số đơn', 'Thời gian', 'Khách hàng', 'Hình thức', 'Tạm tính', 'Giảm giá', 'Tổng tiền', 'Đã trả', 'Ghi nợ', 'Thu ngân'],
+      types: ['c', 'c', 't', 't', 'm', 'm', 'm', 'm', 'm', 't'], cols: [10, 18, 20, 14, 14, 14, 15, 15, 14, 14], filter: true, land: true, total: [4, 5, 6, 7, 8],
+      rows: R.orders.map(o => [orderNo(o.no), fmtTime(o.time), o.customerName || 'Khách lẻ', METHODS[o.method], o.subtotal, o.subtotal - o.total, o.total, o.paid != null ? o.paid : o.total, o.debt || 0, o.cashier]) },
+    { name: 'Chi tiết hàng bán', tab: 'FF2563EB', title: 'CHI TIẾT HÀNG BÁN', sub, head: ['Số đơn', 'Thời gian', 'Hàng hóa', 'Số lượng', 'Đơn giá', 'Khuyến mãi mỗi món', 'Thành tiền'],
+      types: ['c', 'c', 't', 'n', 'm', 'm', 'm'], cols: [10, 18, 28, 10, 14, 18, 16], filter: true, land: true, total: [3, 6],
+      rows: R.orders.flatMap(o => o.items.map(i => [orderNo(o.no), fmtTime(o.time), i.name, i.qty, i.price, i.disc || 0, (i.price - (i.disc || 0)) * i.qty])) },
+    { name: 'Bán chạy', tab: 'FF22C55E', title: 'HÀNG BÁN CHẠY', sub, head: ['Hạng', 'Hàng hóa', 'Số lượng bán', 'Doanh thu'], types: ['c', 't', 'n', 'm'], cols: [8, 30, 14, 18], filter: true, total: [2, 3],
+      rows: R.items.map((t, i) => [i + 1, t.name, t.qty, t.rev]) }
   ]);
   const name = `mas-bao-cao-${dinput(a)}-den-${dinput(b - 1)}.xlsx`;
   if (await saveFile(name, blob)) toast(`Đã xuất ${name}.`);
@@ -1747,6 +1815,9 @@ function viewSettings() {
     ('<p class="muted" style="margin-bottom:14px">Dữ liệu lưu ngay trên máy này' + (IS_APP ? ' và dùng được khi mất mạng' : '') + '. Hãy sao lưu ra file thường xuyên, để không mất dữ liệu khi đổi máy, xóa trình duyệt hoặc gỡ app.</p>' +
       '<div class="row-gap" style="margin-bottom:14px"><button type="button" class="btn primary" data-act="backup">Sao lưu ra file</button><button type="button" class="btn" data-act="restore">Khôi phục từ file</button>' +
       '<input type="file" id="restore-file" accept=".json,application/json" hidden></div>') +
+    '<div class="row-gap" style="margin-bottom:18px"><button type="button" class="btn" data-act="exportall">Xuất toàn bộ dữ liệu ra Excel</button></div>' +
+    '<h3 class="b" style="margin-bottom:4px">Bản dự phòng tự động</h3><p class="muted sm" style="margin-bottom:10px">App tự lưu một bản trên máy này mỗi ngày và trước khi nhập hàng, khôi phục hay xóa dữ liệu. Giữ ' + SNAPKEEP + ' bản mới nhất. Nếu xóa dữ liệu trình duyệt thì các bản này cũng mất, nên vẫn cần sao lưu ra file.</p>' +
+    '<div id="snap-list" style="margin-bottom:10px"></div><div class="row-gap" style="margin-bottom:18px"><button type="button" class="btn" data-act="snapnow">Lưu bản dự phòng ngay</button></div>' +
     '<p class="muted sm" style="margin-bottom:10px">Khôi phục dữ liệu mẫu sẽ xóa đơn hàng, khách hàng, sổ quỹ đã tạo và đưa mọi thứ về dữ liệu ban đầu.</p>' +
     `<button type="button" class="btn danger" data-act="reset">${ui.arm === 'reset' ? 'Bấm lần nữa để khôi phục' : 'Khôi phục dữ liệu mẫu'}</button></div></div>`;
 }
@@ -1762,8 +1833,182 @@ async function backup() {
   if (await saveFile(name, new Blob([JSON.stringify(S)], { type: 'application/json' }))) toast(`Đã tạo file ${name}.`);
 }
 
+/* ---------- Bản dự phòng tự động (IndexedDB) ---------- */
+const SNAPKEEP = 8, SNAPGAP = 20 * 36e5;
+const idb = () => new Promise((ok, no) => { const r = indexedDB.open('mas-snaps', 1); r.onupgradeneeded = () => r.result.createObjectStore('s', { keyPath: 't' }); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); });
+const idbDo = (db, mode, fn) => new Promise((ok, no) => { const tx = db.transaction('s', mode), q = fn(tx.objectStore('s')); tx.oncomplete = () => ok(q && q.result); tx.onerror = () => no(tx.error); });
+async function snapAll() { const db = await idb(); return (await idbDo(db, 'readonly', st => st.getAll())).sort((a, b) => b.t - a.t); }
+async function snapPut(why) {
+  try {
+    const db = await idb();
+    await idbDo(db, 'readwrite', st => st.put({ t: Date.now(), why, np: S.products.length, nc: S.customers.length, no: S.orders.length, data: JSON.stringify(S) }));
+    const old = (await snapAll()).slice(SNAPKEEP);
+    if (old.length) await idbDo(db, 'readwrite', st => { old.forEach(x => st.delete(x.t)); });
+    return true;
+  } catch (e) { return false; }
+}
+async function snapAuto() {
+  try { const a = await snapAll(); if (!a.length || Date.now() - a[0].t > SNAPGAP) await snapPut('Tự động'); } catch (e) {}
+}
+async function drawSnaps() {
+  const el = $('#snap-list'); if (!el) return;
+  let a; try { a = await snapAll(); } catch (e) { el.textContent = 'Trình duyệt này không cho lưu bản dự phòng. Hãy dùng nút Sao lưu ra file.'; return; }
+  if (!$('#snap-list')) return;
+  el.innerHTML = a.length ? a.map(x => `<div class="snap"><span><span class="b">${fmtTime(x.t)}</span> <span class="muted sm">${esc(x.why)}: ${x.np} hàng, ${x.nc} khách, ${x.no} đơn</span></span>` +
+    `<span class="row-gap" style="flex-wrap:nowrap"><button type="button" class="btn sm" data-act="snapdl" data-id="${x.t}">Tải về</button><button type="button" class="btn sm" data-act="snaprest" data-id="${x.t}">Khôi phục</button></span></div>`).join('')
+    : '<p class="muted sm">Chưa có bản dự phòng nào. Bản đầu tiên sẽ tự tạo khi bạn mở app.</p>';
+}
+async function snapGet(t) { const db = await idb(); return idbDo(db, 'readonly', st => st.get(t)); }
+
+/* ---------- Nhập hàng từ Excel hoặc CSV ---------- */
+async function inflateRaw(u8) {
+  const r = new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(r).arrayBuffer());
+}
+async function unzip(buf) { // chỉ đọc các file cần cho xlsx
+  const u = new Uint8Array(buf), v = new DataView(buf), td = new TextDecoder(), out = {};
+  let e = u.length - 22; while (e >= 0 && v.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw new Error('zip');
+  let p = v.getUint32(e + 16, true);
+  for (let n = v.getUint16(e + 10, true); n > 0; n--) {
+    const meth = v.getUint16(p + 10, true), csz = v.getUint32(p + 20, true), nl = v.getUint16(p + 28, true), xl = v.getUint16(p + 30, true), cl = v.getUint16(p + 32, true), lo = v.getUint32(p + 42, true);
+    const name = td.decode(u.subarray(p + 46, p + 46 + nl)); p += 46 + nl + xl + cl;
+    if (!/^xl\/(sharedStrings\.xml|worksheets\/sheet\d+\.xml)$/.test(name)) continue;
+    const ds = lo + 30 + v.getUint16(lo + 26, true) + v.getUint16(lo + 28, true), raw = u.subarray(ds, ds + csz);
+    out[name] = td.decode(meth === 0 ? raw : await inflateRaw(raw));
+  }
+  return out;
+}
+async function readXlsx(buf) {
+  const z = await unzip(buf), dp = new DOMParser();
+  const txt = el => Array.from(el.getElementsByTagName('t')).map(t => t.textContent).join('');
+  const ss = z['xl/sharedStrings.xml'] ? Array.from(dp.parseFromString(z['xl/sharedStrings.xml'], 'text/xml').getElementsByTagName('si')).map(txt) : [];
+  const names = Object.keys(z).filter(k => /worksheets/.test(k)).sort((a, b) => parseInt(a.replace(/\D/g, ''), 10) - parseInt(b.replace(/\D/g, ''), 10));
+  if (!names.length) throw new Error('sheet');
+  const rows = []; // ponytail: chỉ đọc sheet đầu tiên
+  for (const r of dp.parseFromString(z[names[0]], 'text/xml').getElementsByTagName('row')) {
+    const row = [];
+    for (const c of r.getElementsByTagName('c')) {
+      let ci = 0; for (const ch of (c.getAttribute('r') || '').replace(/\d/g, '')) ci = ci * 26 + ch.charCodeAt(0) - 64;
+      const t = c.getAttribute('t'), vEl = c.getElementsByTagName('v')[0], v = vEl ? vEl.textContent : '';
+      row[ci - 1] = t === 's' ? (ss[+v] || '') : t === 'inlineStr' ? txt(c) : t === 'str' || t === 'b' ? v : (v === '' ? '' : Number(v));
+    }
+    rows.push(Array.from(row, x => x == null ? '' : x));
+  }
+  return rows;
+}
+function readCsv(text) {
+  text = text.replace(/^﻿/, '');
+  const first = text.split(/\r?\n/)[0], d = [';', '\t', ','].reduce((b, c) => first.split(c).length > first.split(b).length ? c : b, ',');
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === d) { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+    else cur += c;
+  }
+  if (cur || row.length) { row.push(cur); rows.push(row); }
+  return rows;
+}
+const HCOL = { name: /^(ten|san pham)/, sku: /^(ma|sku)/, cat: /^(nhom|danh muc|loai)/, cost: /(von|gia nhap)/, price: /(gia ban|^gia$)/, stock: /(^ton|so luong|^sl$)/ };
+function cellNum(v) { // '' = để trống, NaN = sai
+  if (typeof v === 'number') return Math.round(v);
+  v = String(v).trim(); if (!v) return '';
+  if (/^\d+[.,]\d{1,2}$/.test(v)) return Math.round(parseFloat(v.replace(',', '.')));
+  return /[^\d.,\s]/.test(v) ? NaN : num(v);
+}
+function parseImport(rows) {
+  rows = rows.filter(r => r.some(c => String(c).trim() !== '') && !/^tong\b/.test(norm(String(r[0]))));
+  if (!rows.length) return { err: 'File trống.' };
+  let hi = 0, col = {}; // tìm dòng tiêu đề trong 8 dòng đầu (file xuất từ MAS có dòng tên báo cáo phía trên)
+  for (; hi < Math.min(rows.length, 8); hi++) {
+    const hd = rows[hi].map(h => norm(String(h)).trim()); col = {};
+    for (const k in HCOL) col[k] = hd.findIndex((h, i) => HCOL[k].test(h) && !Object.values(col).includes(i));
+    if (col.name >= 0 && col.price >= 0) break;
+  }
+  if (hi >= Math.min(rows.length, 8)) return { err: 'Không thấy cột "Tên hàng" và "Giá bán" ở dòng đầu. Hãy tải file mẫu để xem cách điền.' };
+  const g = (r, k) => col[k] < 0 ? '' : (r[col[k]] == null ? '' : r[col[k]]);
+  const out = [], seenN = new Set(), seenS = new Set();
+  rows.slice(hi + 1).forEach((r, i) => {
+    const o = { line: i + hi + 2, name: String(g(r, 'name')).trim(), sku: String(g(r, 'sku')).trim(), cat: String(g(r, 'cat')).trim(), cost: cellNum(g(r, 'cost')), price: cellNum(g(r, 'price')), stock: cellNum(g(r, 'stock')) }, m = [];
+    const ex = S.products.find(p => (o.sku && norm(p.sku) === norm(o.sku)) || norm(p.name) === norm(o.name));
+    if (!o.name) m.push('thiếu tên hàng');
+    else if (o.name.length > 80) m.push('tên quá 80 ký tự');
+    else if (seenN.has(norm(o.name)) || (o.sku && seenS.has(norm(o.sku)))) m.push('trùng hàng khác trong file');
+    if (o.price === '' || Number.isNaN(o.price) || o.price <= 0 || o.price > MAXMONEY) m.push('giá bán phải từ 1 đến 999.999.999');
+    if (Number.isNaN(o.cost) || o.cost > MAXMONEY) m.push('giá vốn không hợp lệ');
+    if (Number.isNaN(o.stock) || o.stock > 1e6) m.push('tồn kho không hợp lệ');
+    if (o.name) { seenN.add(norm(o.name)); if (o.sku) seenS.add(norm(o.sku)); }
+    o.ex = ex ? ex.id : null; o.act = m.length ? 'err' : ex ? 'upd' : 'add'; o.msg = m.join(', ');
+    out.push(o);
+  });
+  return out.length ? { rows: out } : { err: 'File chỉ có dòng tiêu đề, chưa có hàng nào.' };
+}
+function impxModal(d) {
+  const R = d.res;
+  if (!R || !R.rows) return closeX('Nhập hàng từ Excel') + (R && R.err ? `<p class="err" role="alert" style="margin-bottom:12px">${esc(R.err)}</p>` : '') +
+    '<p style="margin-bottom:8px">Chọn file Excel (.xlsx) hoặc CSV có các cột: <b>Tên hàng, Mã hàng, Nhóm hàng, Giá vốn, Giá bán, Tồn kho</b>. Bắt buộc có Tên hàng và Giá bán.</p>' +
+    '<p class="muted sm" style="margin-bottom:14px">Hàng trùng mã hoặc trùng tên với hàng đang có sẽ được cập nhật giá và tồn kho theo file. Hàng mới sẽ được thêm vào. App tự lưu bản dự phòng trước khi nhập.</p>' +
+    '<input type="file" id="imp-file" accept=".xlsx,.csv,text/csv" hidden><div class="dactions"><button type="button" class="btn" data-act="imptpl">Tải file mẫu</button><button type="button" class="btn primary grow" data-act="impfile">Chọn file</button></div>';
+  const n = k => R.rows.filter(r => r.act === k).length, bad = R.rows.filter(r => r.act === 'err'), ok = n('add') + n('upd');
+  return closeX('Xem trước khi nhập') +
+    `<p style="margin-bottom:8px"><b>${esc(R.file)}</b>: ${R.rows.length} dòng. Thêm mới <b>${n('add')}</b>, cập nhật <b>${n('upd')}</b>, bỏ qua vì lỗi <b>${bad.length}</b>.</p>` +
+    (bad.length ? '<div class="impbad">' + bad.slice(0, 8).map(r => `<div>Dòng ${r.line}: ${esc(r.msg)}</div>`).join('') + (bad.length > 8 ? `<div>… và ${bad.length - 8} dòng lỗi khác</div>` : '') + '</div>' : '') +
+    '<div class="impprev">' + R.rows.filter(r => r.act !== 'err').slice(0, 5).map(r => `<div><span class="badge${r.act === 'upd' ? ' warn' : ''}">${r.act === 'upd' ? 'Cập nhật' : 'Mới'}</span> ${esc(r.name)} <span class="muted sm">${r.price === '' ? '' : fmt(r.price)}</span></div>`).join('') + '</div>' +
+    `<div class="dactions"><button type="button" class="btn" data-act="impagain">Chọn file khác</button><button type="button" class="btn primary grow" data-act="impgo"${ok ? '' : ' disabled'}>Nhập ${ok} hàng</button></div>`;
+}
+async function impApply() {
+  const R = ui.modal && ui.modal.data.res; if (!R || !R.rows) return;
+  await snapPut('Trước khi nhập hàng');
+  let a = 0, u = 0;
+  for (const r of R.rows) {
+    if (r.act === 'err') continue;
+    const cat = r.cat || '';
+    if (cat && !S.cats.includes(cat)) S.cats.push(cat);
+    if (r.act === 'upd') {
+      const p = findP(r.ex); p.price = r.price; if (r.cost !== '') p.cost = r.cost; if (r.stock !== '') p.stock = r.stock; if (cat) p.cat = cat; u++;
+    } else {
+      S.products.unshift({ id: 'p' + uid(), sku: r.sku || nextSku(), name: r.name, cat: cat || (S.cats.includes('Khác') ? 'Khác' : S.cats[0]), cost: r.cost || 0, price: r.price, stock: r.stock || 0, img: '' }); a++;
+    }
+  }
+  save(); closeModal(); render(); toast(`Đã thêm ${a} hàng mới, cập nhật ${u} hàng.`);
+}
+async function impRead(file) {
+  let res;
+  try {
+    const rows = /\.xlsx$/i.test(file.name) ? await readXlsx(await file.arrayBuffer()) : readCsv(await file.text());
+    res = parseImport(rows);
+  } catch (e) { res = { err: 'Không đọc được file này. Hãy chọn file .xlsx hoặc .csv (không phải .xls cũ).' }; }
+  res.file = file.name; ui.modal.data.res = res; drawModal();
+}
+async function impTemplate() {
+  const csv = '﻿Tên hàng,Mã hàng,Nhóm hàng,Giá vốn,Giá bán,Tồn kho\r\nNước suối 1.5L,SP101,Đồ uống,5000,8000,24\r\nMì gói,,Đồ ăn,3200,4500,100\r\n';
+  if (await saveFile('mas-mau-nhap-hang.csv', new Blob([csv], { type: 'text/csv' }))) toast('Đã tạo file mẫu. Mở bằng Excel, điền hàng rồi chọn lại ở đây.');
+}
+
+/* ---------- Xuất toàn bộ dữ liệu ra Excel ---------- */
+async function exportAll() {
+  const store = S.settings.storeName || 'MAS', d = new Date(), sub = `${store}  ·  Xuất lúc ${fmtTime(d.getTime())}`;
+  const items = S.orders.flatMap(o => o.items.map(i => [orderNo(o.no), fmtTime(o.time), i.name, i.qty, i.price, i.disc || 0, (i.price - (i.disc || 0)) * i.qty]));
+  const blob = xlsxBlob([
+    { name: 'Hàng hóa', tab: 'FF2563EB', title: 'DANH SÁCH HÀNG HÓA', sub, head: ['Mã hàng', 'Tên hàng', 'Nhóm hàng', 'Giá vốn', 'Giá bán', 'Tồn kho', 'Giá trị tồn'], types: ['c', 't', 't', 'm', 'm', 'n', 'm'], cols: [12, 30, 16, 14, 14, 10, 16], filter: true, total: [5, 6],
+      rows: S.products.map(p => [p.sku, p.name, p.cat, p.cost, p.price, p.stock, p.cost * Math.max(0, p.stock)]) },
+    { name: 'Khách hàng', tab: 'FF38BDF8', title: 'DANH SÁCH KHÁCH HÀNG', sub, head: ['Tên khách', 'Số điện thoại', 'Số đơn', 'Đã mua', 'Còn nợ', 'Ghi chú'], types: ['t', 't', 'n', 'm', 'm', 't'], cols: [24, 16, 10, 16, 16, 30], filter: true, total: [2, 3, 4],
+      rows: S.customers.map(c => { const t = custStats(c.id); return [c.name, c.phone || '', t.count, t.spent, t.debt, c.note || '']; }) },
+    { name: 'Sổ quỹ', tab: 'FF22C55E', title: 'SỔ QUỸ THU CHI', sub, head: ['Thời gian', 'Loại', 'Nhóm', 'Hình thức', 'Số tiền', 'Ghi chú'], types: ['c', 'c', 't', 't', 'm', 't'], cols: [18, 10, 18, 14, 16, 36], filter: true, total: [4],
+      rows: S.cash.slice().sort((a, b) => a.time - b.time).map(k => [fmtTime(k.time), k.type === 'in' ? 'Thu' : 'Chi', k.cat, FUND_METHODS[k.method] || '', k.amount, k.note || '']) },
+    { name: 'Đơn hàng', tab: 'FF0F172A', title: 'TẤT CẢ ĐƠN HÀNG', sub, head: ['Số đơn', 'Thời gian', 'Khách hàng', 'Hình thức', 'Tổng tiền', 'Đã trả', 'Ghi nợ', 'Thu ngân', 'Trạng thái'], types: ['c', 'c', 't', 't', 'm', 'm', 'm', 't', 'c'], cols: [10, 18, 20, 14, 15, 15, 14, 14, 12], filter: true, land: true,
+      rows: S.orders.map(o => [orderNo(o.no), fmtTime(o.time), o.customerName || 'Khách lẻ', METHODS[o.method] || '', o.total, o.paid != null ? o.paid : o.total, o.debt || 0, o.cashier || '', o.voided ? 'Đã hủy' : 'Hoàn tất']) },
+    { name: 'Chi tiết hàng bán', tab: 'FF2563EB', title: 'CHI TIẾT HÀNG BÁN', sub, head: ['Số đơn', 'Thời gian', 'Hàng hóa', 'Số lượng', 'Đơn giá', 'Khuyến mãi mỗi món', 'Thành tiền'], types: ['c', 'c', 't', 'n', 'm', 'm', 'm'], cols: [10, 18, 28, 10, 14, 18, 16], filter: true, land: true, rows: items }
+  ]);
+  const name = `mas-toan-bo-du-lieu-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}.xlsx`;
+  if (await saveFile(name, blob)) toast(`Đã xuất ${name}.`);
+}
+
 const VIEWS = { pos: viewPOS, products: viewProducts, customers: viewCustomers, orders: viewOrders, fund: viewFund, promos: viewPromos, report: viewReport, settings: viewSettings };
-const MODALS = { cats: catsModal, pview: pviewModal, pay: payModal, receipt: receiptModal, prod: prodModal, stock: stockModal, pickcust: pickCustModal, custform: custFormModal, cust: custModal, cash: cashModal, promo: promoModal };
+const MODALS = { cats: catsModal, pview: pviewModal, pay: payModal, receipt: receiptModal, prod: prodModal, stock: stockModal, pickcust: pickCustModal, custform: custFormModal, cust: custModal, cash: cashModal, promo: promoModal, impx: impxModal };
 
 /* ---------- Modal ---------- */
 function openModal(kind, data) {
@@ -1848,9 +2093,18 @@ document.addEventListener('click', e => {
     case 'pickimg': $('#f-imgfile').click(); break;
     case 'rmimg': keepForm('form[data-form="prod"]'); ui.modal.values.img = ''; drawModal(); break;
     case 'backup': backup(); break;
+    case 'importx': openModal('impx', {}); break;
+    case 'impfile': $('#imp-file').click(); break;
+    case 'impagain': ui.modal.data.res = null; drawModal(); break;
+    case 'impgo': impApply(); break;
+    case 'imptpl': impTemplate(); break;
+    case 'exportall': exportAll(); break;
+    case 'snapnow': snapPut('Bấm tay').then(ok => { drawSnaps(); toast(ok ? 'Đã lưu bản dự phòng.' : 'Không lưu được bản dự phòng trên trình duyệt này.', ok ? 'ok' : 'err'); }); break;
+    case 'snapdl': snapGet(+id).then(x => x && saveFile(`mas-du-phong-${x.t}.json`, new Blob([x.data], { type: 'application/json' }))); break;
+    case 'snaprest': snapGet(+id).then(x => { if (!x) return; ask({ title: 'Khôi phục bản dự phòng này?', msg: `Bản lúc ${fmtTime(x.t)} có ${x.np} hàng và ${x.no} đơn. Dữ liệu hiện tại sẽ được lưu thành một bản dự phòng trước khi thay.`, ok: 'Khôi phục' }, async () => { await snapPut('Trước khi khôi phục'); S = migrate(JSON.parse(x.data)); save(); applyTheme(); render(); toast('Đã khôi phục bản dự phòng.'); }); }); break;
     case 'logo': introLogo(true); break;
     case 'restore': $('#restore-file').click(); break;
-    case 'reset': if (!confirm2('reset', () => { S = seed(); save(); applyTheme(); ui.cat = 'Tất cả'; ui.q = ''; render(); toast('Đã khôi phục dữ liệu mẫu.'); })) render(); break;
+    case 'reset': if (!confirm2('reset', async () => { await snapPut('Trước khi xóa dữ liệu'); S = seed(); save(); applyTheme(); ui.cat = 'Tất cả'; ui.q = ''; render(); toast('Đã khôi phục dữ liệu mẫu.'); })) render(); break;
   }
 });
 document.addEventListener('input', e => {
@@ -1901,14 +2155,15 @@ document.addEventListener('change', e => {
   im.src = url;
 });
 document.addEventListener('change', e => {
+  if (e.target.id === 'imp-file' && e.target.files[0]) { impRead(e.target.files[0]); e.target.value = ''; return; }
   if (e.target.id !== 'restore-file' || !e.target.files[0]) return;
   const r = new FileReader();
   r.onload = () => {
     try {
       const d = JSON.parse(r.result);
       if (!d || !Array.isArray(d.products) || !Array.isArray(d.orders) || !d.settings) throw 0;
-      ask({ title: 'Khôi phục từ file này?', msg: `File có ${d.products.length} mặt hàng và ${d.orders.length} đơn hàng. Dữ liệu hiện tại trên máy sẽ bị thay thế.`, ok: 'Khôi phục' }, () => {
-        S = migrate(d); save(); applyTheme(); render();
+      ask({ title: 'Khôi phục từ file này?', msg: `File có ${d.products.length} mặt hàng và ${d.orders.length} đơn hàng. Dữ liệu hiện tại trên máy sẽ bị thay thế.`, ok: 'Khôi phục' }, async () => {
+        await snapPut('Trước khi khôi phục từ file'); S = migrate(d); save(); applyTheme(); render();
         toast(`Đã khôi phục ${S.products.length} mặt hàng, ${S.customers.length} khách và ${S.orders.length} đơn hàng.`);
       });
     } catch (err) { toast('File này không phải bản sao lưu của MAS. Hãy chọn file .json đã tạo bằng nút Sao lưu.', 'err'); }
@@ -1941,6 +2196,7 @@ $('#site-logo').innerHTML = MissingLogo.svg({ size: 44, theme: 'dark' });
 $('#m-logo').innerHTML = MissingLogo.svg({ size: 28, theme: 'dark' });
 introLogo(false);
 if (IS_APP && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+setTimeout(snapAuto, 3000); setInterval(snapAuto, 36e5);
 })();
 </script>
 </body>
