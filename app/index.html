@@ -160,6 +160,7 @@ textarea.input{padding:12px 14px;min-height:80px;resize:vertical}
 .kpi.hero .l{color:#DBEAFE}
 .kpi.warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn-text)}
 .kpi.warn .l{color:var(--warn-text)}
+.catsel{display:none}
 .toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .toolbar .search{min-height:44px;width:320px;max-width:100%}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
@@ -287,6 +288,7 @@ img.tile{object-fit:cover;background:var(--surface-2)}
 #print-area{display:none}
 
 @media (max-width:820px){
+  .catsel{display:block}.pos .chips{display:none}
   .app{flex-direction:column}
   main{min-height:0}
   .nav{position:fixed;left:0;right:0;bottom:0;width:auto;flex-direction:row;justify-content:flex-start;gap:0;padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));z-index:20;overflow-x:auto;overflow-y:hidden}
@@ -327,6 +329,20 @@ img.tile{object-fit:cover;background:var(--surface-2)}
   #print-area{display:block}
   #print-area .receipt{width:58mm;padding:4mm 3mm}
 }
+/* ===== Giao diện tươi theo MAO ===== */
+:root{--bg:#F1F6FF;--nav-ink:rgba(255,255,255,.82);--nav-active:rgba(255,255,255,.22);--line:#DCE6F5;--shadow:0 2px 12px rgba(37,99,235,.09)}
+.nav{background:linear-gradient(180deg,#2563EB 0%,#0EA5E9 100%)}
+.nav button:hover{background:rgba(255,255,255,.12)}
+.nav button[aria-current="page"] svg{color:#fff}
+.btn.primary{background:linear-gradient(135deg,#2563EB,#1D4ED8);border-color:transparent;box-shadow:0 4px 14px rgba(37,99,235,.35)}
+.btn.primary:hover{background:linear-gradient(135deg,#3B82F6,#2563EB);border-color:transparent}
+.btn.primary:disabled{box-shadow:none}
+.card,.panel{border-radius:16px;border-color:transparent;box-shadow:var(--shadow)}
+.card:hover{box-shadow:0 6px 18px rgba(37,99,235,.18)}
+.chip{border-color:transparent;box-shadow:0 1px 4px rgba(15,23,42,.08)}
+.chip[aria-pressed="true"]{background:linear-gradient(135deg,#2563EB,#0EA5E9);border-color:transparent;color:#fff}
+.pill{background:#fff;box-shadow:0 1px 4px rgba(15,23,42,.08)}
+.mbar{background:linear-gradient(90deg,#2563EB,#0EA5E9)}
 </style>
 </head>
 <body>
@@ -761,7 +777,7 @@ function migrate(d) {
 let S = load();
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('Không lưu được: bộ nhớ trên máy đã đầy. Hãy bỏ bớt ảnh hàng hóa rồi thử lại.', 'err'); } };
 
-const ui = { view: 'pos', rsort: 'desc', rf: { range: '7d', from: '', to: '' }, of: { range: '7d', from: '', to: '' }, oq: '', osort: 'new', cat: 'Tất cả', q: '', sheet: false, ff: { range: 'today', from: '', to: '' }, pf: 'all', pq: '', cf: 'all', cq: '', arm: null, pay: null, modal: null, lastFocus: null };
+const ui = { view: 'pos', rsort: 'desc', rf: { range: '7d', from: '', to: '' }, of: { range: '7d', from: '', to: '' }, oq: '', osort: 'new', cat: 'Tất cả', q: '', sheet: false, ff: { range: 'today', from: '', to: '' }, pf: 'all', pc: 'Tất cả', pq: '', cf: 'all', cq: '', arm: null, pay: null, modal: null, lastFocus: null };
 
 const svg = (d, s = 22) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const I = {
@@ -917,6 +933,7 @@ function viewPOS() {
     `<span class="pill"><i class="dot"></i>${IS_APP ? 'Chạy được khi mất mạng' : 'Dữ liệu lưu trên máy này'}</span></div>` +
     `<div class="search">${svg(I.search, 20)}<label for="q" class="sr">Tìm hàng hoặc nhập mã hàng</label>` +
     `<input id="q" type="search" autocomplete="off" placeholder="Tìm tên hàng, hoặc nhập mã rồi nhấn Enter" value="${esc(ui.q)}" data-input="q"></div>` +
+    `<label for="catsel" class="sr">Nhóm hàng</label><select id="catsel" class="input catsel" data-input="catsel">` + cats.map(c => `<option value="${esc(c)}"${ui.cat === c ? ' selected' : ''}>${c === 'Tất cả' ? 'Tất cả nhóm hàng' : esc(c)}</option>`).join('') + '</select>' +
     '<div class="chips" role="group" aria-label="Nhóm hàng">' + cats.map(c =>
       `<button type="button" class="chip" data-act="cat" data-v="${esc(c)}" aria-pressed="${ui.cat === c}">${esc(c)}</button>`).join('') + '</div>' +
     '<div class="grid" id="grid"></div></section>' +
@@ -931,8 +948,8 @@ function renderGrid() {
   const g = $('#grid'); if (!g) return;
   const list = filteredProducts();
   if (!list.length) {
-    g.innerHTML = '<div class="empty">' + (S.products.length ? `Không có hàng nào khớp "${esc(ui.q)}". Thử từ khóa khác hoặc chọn nhóm Tất cả.` : 'Chưa có hàng hóa nào. Thêm từng món hoặc nhập nhiều hàng một lần từ file Excel.') +
-      `<br><button type="button" class="btn sm" data-act="importx">Nhập từ Excel</button> <button type="button" class="btn sm" data-act="newprod">${svg(I.plus, 18)}Thêm hàng mới</button></div>`;
+    g.innerHTML = '<div class="empty">' + (S.products.length ? `Không có hàng nào khớp "${esc(ui.q)}". Thử từ khóa khác hoặc chọn nhóm Tất cả.` : 'Chưa có hàng hóa nào. Thêm từng món, nhập từ file Excel, hoặc nạp hàng mẫu để xem thử app.') +
+      `<br><button type="button" class="btn sm" data-act="importx">Nhập từ Excel</button> <button type="button" class="btn sm" data-act="demoload">Nạp hàng mẫu</button> <button type="button" class="btn sm" data-act="newprod">${svg(I.plus, 18)}Thêm hàng mới</button></div>`;
     return;
   }
   g.innerHTML = list.map(p => {
@@ -1147,7 +1164,7 @@ function viewProducts() {
     `<div class="row-gap"><button type="button" class="btn" data-act="cats">Nhóm hàng</button><button type="button" class="btn" data-act="stockin">Nhập kho</button><button type="button" class="btn" data-act="importx">Nhập Excel</button><button type="button" class="btn primary" data-act="newprod">${svg(I.plus, 20)}Thêm hàng</button></div></div>` +
     '<div class="toolbar"><div class="chips" role="group" aria-label="Lọc hàng hóa">' + tabs.map(t =>
       `<button type="button" class="chip" data-act="pf" data-v="${t[0]}" aria-pressed="${ui.pf === t[0]}">${t[1]}</button>`).join('') +
-    `</div><div class="search">${svg(I.search, 18)}<label for="pq" class="sr">Tìm hàng hóa</label><input id="pq" type="search" autocomplete="off" placeholder="Tìm tên hoặc mã hàng" value="${esc(ui.pq)}" data-input="pq"></div></div>` +
+    `</div><div class="row-gap" style="flex-wrap:wrap"><label for="pcat" class="sr">Lọc theo nhóm hàng</label><select id="pcat" class="input" style="width:auto;min-width:160px" data-input="pc"><option value="Tất cả">Tất cả nhóm hàng</option>${S.cats.map(c => `<option value="${esc(c)}"${ui.pc === c ? ' selected' : ''}>${esc(c)} (${P.filter(p => p.cat === c).length})</option>`).join('')}</select><div class="search">${svg(I.search, 18)}<label for="pq" class="sr">Tìm hàng hóa</label><input id="pq" type="search" autocomplete="off" placeholder="Tìm tên hoặc mã hàng" value="${esc(ui.pq)}" data-input="pq"></div></div></div>` +
     '<div class="table" id="ptable"></div></div>';
 }
 function renderPTable() {
@@ -1155,7 +1172,8 @@ function renderPTable() {
   const q = norm(ui.pq.trim());
   const list = S.products.filter(p => {
     const okF = ui.pf === 'all' || (ui.pf === 'low' && p.stock > 0 && p.stock <= LOW) || (ui.pf === 'out' && p.stock <= 0);
-    return okF && (!q || norm(p.name).includes(q) || norm(p.sku).includes(q));
+    const okC = ui.pc === 'Tất cả' || !S.cats.includes(ui.pc) || p.cat === ui.pc;
+    return okF && okC && (!q || norm(p.name).includes(q) || norm(p.sku).includes(q));
   });
   const head = '<div class="tr tp head"><span>Hàng hóa</span><span class="num">Tồn</span><span class="sr">Thao tác</span></div>';
   if (!list.length) { el.innerHTML = head + '<div style="padding:16px"><div class="empty">Không có hàng nào trong mục này.</div></div>'; return; }
@@ -1650,10 +1668,10 @@ function xlsxBlob(sheets) {
   const styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
     '<numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0&quot; đ&quot;;-#,##0&quot; đ&quot;;&quot;-&quot;"/></numFmts>' +
     '<fonts count="6">' + font('', 11, 'FF0F172A') + font('<b/>', 11, 'FF0F172A') + font('<b/>', 11, 'FFFFFFFF') + font('<b/>', 16, 'FFFFFFFF') + font('<i/>', 10, 'FF64748B') + font('<b/>', 11, 'FF1E3A8A') + '</fonts>' +
-    '<fills count="6"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' + fill('FF0F172A') + fill('FF2563EB') + fill('FFF1F5F9') + fill('FFDBEAFE') + '</fills>' +
+    '<fills count="6"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' + '<fill><gradientFill degree="0"><stop position="0"><color rgb="FF0EA5E9"/></stop><stop position="1"><color rgb="FF14B8A6"/></stop></gradientFill></fill>' + fill('FF2563EB') + fill('FFEFF6FF') + fill('FFDBEAFE') + '</fills>' +
     '<borders count="3"><border><left/><right/><top/><bottom/><diagonal/></border>' +
-    `<border>${bd('FFCBD5E1')}<top style="thin"><color rgb="FFCBD5E1"/></top><bottom style="thin"><color rgb="FFCBD5E1"/></bottom><diagonal/></border>` +
-    `<border>${bd('FFCBD5E1')}<top style="medium"><color rgb="FF2563EB"/></top><bottom style="medium"><color rgb="FF2563EB"/></bottom><diagonal/></border></borders>` +
+    `<border>${bd('FFBFDBFE')}<top style="thin"><color rgb="FFBFDBFE"/></top><bottom style="thin"><color rgb="FFBFDBFE"/></bottom><diagonal/></border>` +
+    `<border>${bd('FFBFDBFE')}<top style="medium"><color rgb="FF2563EB"/></top><bottom style="medium"><color rgb="FF2563EB"/></bottom><diagonal/></border></borders>` +
     '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="15">' +
     '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
     xf(0, 3, 2, 0, `${LF} indent="1"`) + xf(0, 4, 0, 0, `${LF} indent="1"`) + xf(0, 2, 3, 1, `${CT} wrapText="1"`) +
@@ -1707,7 +1725,7 @@ async function exportExcel() {
       ['Đã giảm cho khách', R.promo], ['Tiền đã thu', R.paid], ['Ghi nợ trong kỳ', R.debt]] },
     { name: 'Theo ngày', tab: 'FF38BDF8', title: 'DOANH THU THEO NGÀY', sub, head: ['Ngày', 'Số đơn', 'Doanh thu', 'Lợi nhuận gộp'], types: ['c', 'n', 'm', 'm'], cols: [14, 10, 18, 18], filter: true, total: [1, 2, 3],
       rows: R.days.map(d => [d.label, d.cnt, d.rev, d.profit]) },
-    { name: 'Đơn hàng', tab: 'FF0F172A', title: 'DANH SÁCH ĐƠN HÀNG', sub, head: ['Số đơn', 'Thời gian', 'Khách hàng', 'Hình thức', 'Tạm tính', 'Giảm giá', 'Tổng tiền', 'Đã trả', 'Ghi nợ', 'Thu ngân'],
+    { name: 'Đơn hàng', tab: 'FF0EA5E9', title: 'DANH SÁCH ĐƠN HÀNG', sub, head: ['Số đơn', 'Thời gian', 'Khách hàng', 'Hình thức', 'Tạm tính', 'Giảm giá', 'Tổng tiền', 'Đã trả', 'Ghi nợ', 'Thu ngân'],
       types: ['c', 'c', 't', 't', 'm', 'm', 'm', 'm', 'm', 't'], cols: [10, 18, 20, 14, 14, 14, 15, 15, 14, 14], filter: true, land: true, total: [4, 5, 6, 7, 8],
       rows: R.orders.map(o => [orderNo(o.no), fmtTime(o.time), o.customerName || 'Khách lẻ', METHODS[o.method], o.subtotal, o.subtotal - o.total, o.total, o.paid != null ? o.paid : o.total, o.debt || 0, o.cashier]) },
     { name: 'Chi tiết hàng bán', tab: 'FF2563EB', title: 'CHI TIẾT HÀNG BÁN', sub, head: ['Số đơn', 'Thời gian', 'Hàng hóa', 'Số lượng', 'Đơn giá', 'Khuyến mãi mỗi món', 'Thành tiền'],
@@ -1738,8 +1756,10 @@ function viewSettings() {
       '<div class="row-gap" style="margin-bottom:14px"><button type="button" class="btn primary" data-act="backup">Sao lưu ra file</button><button type="button" class="btn" data-act="restore">Khôi phục từ file</button>' +
       '<input type="file" id="restore-file" accept=".json,application/json" hidden></div>') +
     '<div class="row-gap" style="margin-bottom:18px"><button type="button" class="btn" data-act="exportall">Xuất toàn bộ dữ liệu ra Excel</button></div>' +
+    '<h3 class="b" style="margin-bottom:4px">Hàng hóa mẫu</h3><p class="muted sm" style="margin-bottom:10px">Chưa biết bắt đầu từ đâu? Nạp vài chục mặt hàng mẫu để xem thử cách bán hàng, khi quen thì xóa đi. Chỉ nạp khi bạn bấm.</p>' +
+    '<div class="row-gap" style="margin-bottom:18px">' + '<button type="button" class="btn" data-act="demoload">Nạp hàng hóa mẫu</button>' + (hasDemo() || emptyDemoCats().length ? ' <button type="button" class="btn danger" data-act="democlear">Xóa hàng hóa mẫu</button>' : '') + '</div>' +
     '<h3 class="b" style="margin-bottom:4px">Bản dự phòng tự động</h3><p class="muted sm" style="margin-bottom:10px">App tự lưu một bản trên máy này mỗi ngày và trước khi nhập hàng, khôi phục hay xóa dữ liệu. Giữ ' + SNAPKEEP + ' bản mới nhất. Nếu xóa dữ liệu trình duyệt thì các bản này cũng mất, nên vẫn cần sao lưu ra file.</p>' +
-    '<div id="snap-list" style="margin-bottom:10px"></div><div class="row-gap" style="margin-bottom:18px"><button type="button" class="btn" data-act="snapnow">Lưu bản dự phòng ngay</button></div>' +
+    '<div id="snap-list" style="margin-bottom:10px;max-height:305px;overflow-y:auto;border:1px solid var(--line);border-radius:12px;padding:0 12px" tabindex="0" role="region" aria-label="Danh sách bản dự phòng"></div><div class="row-gap" style="margin-bottom:18px"><button type="button" class="btn" data-act="snapnow">Lưu bản dự phòng ngay</button></div>' +
     '<p class="muted sm" style="margin-bottom:10px">Xóa toàn bộ dữ liệu sẽ xóa hàng hóa, đơn hàng, khách hàng, sổ quỹ đã tạo và đưa app về trống như mới cài.</p>' +
     `<button type="button" class="btn danger" data-act="reset">${ui.arm === 'reset' ? 'Bấm lần nữa để xóa' : 'Xóa toàn bộ dữ liệu'}</button></div></div>`;
 }
@@ -1932,7 +1952,7 @@ async function exportAll() {
       rows: S.customers.map(c => { const t = custStats(c.id); return [c.name, c.phone || '', t.count, t.spent, t.debt, c.note || '']; }) },
     { name: 'Sổ quỹ', tab: 'FF22C55E', title: 'SỔ QUỸ THU CHI', sub, head: ['Thời gian', 'Loại', 'Nhóm', 'Hình thức', 'Số tiền', 'Ghi chú'], types: ['c', 'c', 't', 't', 'm', 't'], cols: [18, 10, 18, 14, 16, 36], filter: true, total: [4],
       rows: S.cash.slice().sort((a, b) => a.time - b.time).map(k => [fmtTime(k.time), k.type === 'in' ? 'Thu' : 'Chi', k.cat, FUND_METHODS[k.method] || '', k.amount, k.note || '']) },
-    { name: 'Đơn hàng', tab: 'FF0F172A', title: 'TẤT CẢ ĐƠN HÀNG', sub, head: ['Số đơn', 'Thời gian', 'Khách hàng', 'Hình thức', 'Tổng tiền', 'Đã trả', 'Ghi nợ', 'Thu ngân', 'Trạng thái'], types: ['c', 'c', 't', 't', 'm', 'm', 'm', 't', 'c'], cols: [10, 18, 20, 14, 15, 15, 14, 14, 12], filter: true, land: true,
+    { name: 'Đơn hàng', tab: 'FF0EA5E9', title: 'TẤT CẢ ĐƠN HÀNG', sub, head: ['Số đơn', 'Thời gian', 'Khách hàng', 'Hình thức', 'Tổng tiền', 'Đã trả', 'Ghi nợ', 'Thu ngân', 'Trạng thái'], types: ['c', 'c', 't', 't', 'm', 'm', 'm', 't', 'c'], cols: [10, 18, 20, 14, 15, 15, 14, 14, 12], filter: true, land: true,
       rows: S.orders.map(o => [orderNo(o.no), fmtTime(o.time), o.customerName || 'Khách lẻ', METHODS[o.method] || '', o.total, o.paid != null ? o.paid : o.total, o.debt || 0, o.cashier || '', o.voided ? 'Đã hủy' : 'Hoàn tất']) },
     { name: 'Chi tiết hàng bán', tab: 'FF2563EB', title: 'CHI TIẾT HÀNG BÁN', sub, head: ['Số đơn', 'Thời gian', 'Hàng hóa', 'Số lượng', 'Đơn giá', 'Khuyến mãi mỗi món', 'Thành tiền'], types: ['c', 'c', 't', 'n', 'm', 'm', 'm'], cols: [10, 18, 28, 10, 14, 18, 16], filter: true, land: true, rows: items }
   ]);
@@ -1940,8 +1960,61 @@ async function exportAll() {
   if (await saveFile(name, blob)) toast(`Đã xuất ${name}.`);
 }
 
+/* ---------- Dữ liệu mẫu (chỉ nạp khi người dùng bấm) ---------- */
+const DEMO_PACKS = [
+{ id:'tap', name:'Tạp hóa / cửa hàng tiện lợi', stock:[30,100], items:[
+['Nước suối 500ml',5000,3200,'Đồ uống'],['Nước suối 1,5 lít',9000,6000,'Đồ uống'],['Nước ngọt lon',11000,8000,'Đồ uống'],['Nước ngọt chai 1,5 lít',20000,15500,'Đồ uống'],['Trà xanh chai',10000,7200,'Đồ uống'],['Trà đào chai',10000,6800,'Đồ uống'],['Cà phê sữa lon',12000,8500,'Đồ uống'],['Nước tăng lực',12000,9000,'Đồ uống'],['Bia lon',16000,13000,'Đồ uống'],['Nước cam ép hộp',9000,6500,'Đồ uống'],
+['Sữa tươi hộp',9000,6500,'Sữa và trứng'],['Sữa chua uống',7000,5000,'Sữa và trứng'],['Sữa đặc',22000,17500,'Sữa và trứng'],['Trứng gà (vỉ 10)',32000,27000,'Sữa và trứng'],['Phô mai miếng',28000,22000,'Sữa và trứng'],
+['Mì gói',5000,3600,'Mì, gạo, đồ khô'],['Mì ly',12000,9000,'Mì, gạo, đồ khô'],['Phở gói',8000,5800,'Mì, gạo, đồ khô'],['Miến',14000,10500,'Mì, gạo, đồ khô'],['Gạo thơm 5kg',95000,82000,'Mì, gạo, đồ khô'],['Bún khô',16000,12000,'Mì, gạo, đồ khô'],['Cá hộp',24000,18500,'Mì, gạo, đồ khô'],['Đậu phộng rang',12000,8500,'Mì, gạo, đồ khô'],
+['Bánh quy bơ',18000,12500,'Bánh kẹo, snack'],['Snack khoai tây',10000,7000,'Bánh kẹo, snack'],['Snack tôm',6000,4200,'Bánh kẹo, snack'],['Kẹo dẻo',7000,4800,'Bánh kẹo, snack'],['Kẹo cao su',5000,3400,'Bánh kẹo, snack'],['Socola thanh',15000,11000,'Bánh kẹo, snack'],['Bánh mì ngọt',6000,4000,'Bánh kẹo, snack'],['Bánh bông lan',8000,5600,'Bánh kẹo, snack'],['Xúc xích',8000,5500,'Bánh kẹo, snack'],['Kem que',8000,5000,'Bánh kẹo, snack'],
+['Nước mắm 500ml',32000,24000,'Gia vị'],['Nước tương',18000,13000,'Gia vị'],['Dầu ăn 1 lít',48000,41000,'Gia vị'],['Đường 1kg',24000,20000,'Gia vị'],['Muối i-ốt',6000,4000,'Gia vị'],['Hạt nêm 400g',34000,27000,'Gia vị'],['Bột ngọt 400g',30000,24000,'Gia vị'],['Tiêu xay',12000,8500,'Gia vị'],['Tương ớt',14000,10000,'Gia vị'],['Giấm ăn',9000,6000,'Gia vị'],
+['Nước rửa chén',28000,21000,'Đồ gia dụng'],['Bột giặt 400g',35000,28000,'Đồ gia dụng'],['Nước xả vải',42000,34000,'Đồ gia dụng'],['Nước lau sàn',38000,30000,'Đồ gia dụng'],['Giấy vệ sinh (lốc)',42000,34000,'Đồ gia dụng'],['Khăn giấy',12000,8500,'Đồ gia dụng'],['Túi rác',15000,10500,'Đồ gia dụng'],['Pin AA (vỉ 2)',15000,10000,'Đồ gia dụng'],['Bật lửa',5000,3000,'Đồ gia dụng'],
+['Dầu gội',48000,38000,'Chăm sóc cá nhân'],['Sữa tắm',55000,44000,'Chăm sóc cá nhân'],['Kem đánh răng',28000,21000,'Chăm sóc cá nhân'],['Bàn chải đánh răng',15000,10000,'Chăm sóc cá nhân'],['Xà phòng',14000,10000,'Chăm sóc cá nhân'],['Băng vệ sinh',26000,20000,'Chăm sóc cá nhân'],['Khẩu trang (hộp)',30000,22000,'Chăm sóc cá nhân']]},
+{ id:'quan', name:'Quán ăn / quán nước', stock:[40,120], items:[
+['Cà phê đen',15000,5000,'Cà phê'],['Cà phê sữa',18000,6500,'Cà phê'],['Bạc xỉu',22000,8000,'Cà phê'],['Cà phê muối',25000,9000,'Cà phê'],
+['Trà đào cam sả',30000,10000,'Trà và nước ép'],['Trà tắc',15000,4500,'Trà và nước ép'],['Trà sữa trân châu',28000,10000,'Trà và nước ép'],['Nước cam ép',25000,9000,'Trà và nước ép'],['Sinh tố bơ',30000,12000,'Trà và nước ép'],['Nước dừa',20000,9000,'Trà và nước ép'],
+['Cơm gà xối mỡ',45000,22000,'Món chính'],['Cơm sườn nướng',45000,23000,'Món chính'],['Cơm chiên dương châu',40000,18000,'Món chính'],['Bún bò',45000,21000,'Món chính'],['Phở bò',50000,24000,'Món chính'],['Hủ tiếu',40000,18000,'Món chính'],['Mì xào hải sản',50000,25000,'Món chính'],
+['Bánh mì thịt',20000,9000,'Ăn vặt'],['Khoai tây chiên',25000,10000,'Ăn vặt'],['Gà rán (phần)',35000,17000,'Ăn vặt'],['Bánh tráng trộn',20000,8000,'Ăn vặt'],['Há cảo chiên',30000,14000,'Ăn vặt'],
+['Nước suối',8000,3200,'Nước đóng chai'],['Nước ngọt lon',15000,8500,'Nước đóng chai'],['Bia lon',22000,14000,'Nước đóng chai'],['Thêm trân châu',5000,1500,'Topping và ăn kèm'],['Thêm trứng',5000,2500,'Topping và ăn kèm'],['Thêm cơm',5000,2000,'Topping và ăn kèm']]},
+{ id:'ao', name:'Cửa hàng quần áo', stock:[5,30], items:[
+['Áo thun basic nam',120000,65000,'Áo'],['Áo thun basic nữ',110000,60000,'Áo'],['Áo sơ mi trắng',220000,120000,'Áo'],['Áo sơ mi kẻ sọc',240000,135000,'Áo'],['Áo polo',180000,95000,'Áo'],['Áo khoác gió',320000,180000,'Áo'],['Áo hoodie',280000,150000,'Áo'],['Áo len mỏng',250000,140000,'Áo'],
+['Quần jean nam',350000,190000,'Quần'],['Quần jean nữ',340000,185000,'Quần'],['Quần kaki',290000,160000,'Quần'],['Quần short',150000,80000,'Quần'],['Quần jogger',230000,125000,'Quần'],['Quần tây',320000,175000,'Quần'],
+['Đầm hoa',350000,190000,'Váy đầm'],['Đầm công sở',420000,230000,'Váy đầm'],['Chân váy chữ A',210000,110000,'Váy đầm'],['Váy xếp ly',260000,140000,'Váy đầm'],
+['Nón lưỡi trai',90000,45000,'Phụ kiện'],['Thắt lưng da',180000,95000,'Phụ kiện'],['Tất cổ ngắn (đôi)',25000,12000,'Phụ kiện'],['Khăn choàng',130000,70000,'Phụ kiện'],['Túi tote vải',110000,55000,'Phụ kiện']]}
+];
+const hasDemo = () => S.products.some(x => x.demo);
+const emptyDemoCats = () => { const dc = new Set(DEMO_PACKS.flatMap(k => k.items.map(x => x[3]))); CATS.forEach(c => dc.delete(c)); return S.cats.filter(c => dc.has(c) && !S.products.some(x => x.cat === c)); };
+function demoModal() {
+  return closeX('Nạp hàng hóa mẫu') + '<p class="muted sm" style="margin-bottom:12px">Chọn loại cửa hàng gần giống của bạn. Hàng bạn đã nhập giữ nguyên, muốn bỏ thì vào Cài đặt bấm "Xóa hàng hóa mẫu".</p>' +
+    DEMO_PACKS.map(k => `<button type="button" class="btn" style="display:block;width:100%;text-align:left;height:auto;padding:12px 14px;margin-bottom:10px" data-act="demopick" data-v="${k.id}"><b>Dữ liệu mẫu cho ${esc(k.name.toLowerCase())}</b><br><span class="muted sm">${k.items.length} mặt hàng · ${[...new Set(k.items.map(x => x[3]))].length} nhóm hàng</span></button>`).join('');
+}
+function demoLoad(id) {
+  const k = DEMO_PACKS.find(x => x.id === id); if (!k) return;
+  ask({ title: 'Nạp hàng mẫu?', msg: `MAS sẽ thêm ${k.items.length} mặt hàng mẫu (có giá, tồn kho) của ${k.name.toLowerCase()} để bạn xem thử cách bán hàng.`, ok: 'Nạp hàng mẫu', danger: false }, async () => {
+    await snapPut('Trước khi nạp hàng hóa mẫu');
+    let sd = 7; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    k.items.forEach(x => { if (!S.cats.includes(x[3])) S.cats.push(x[3]); });
+    const n0 = S.products.length, [a, b] = k.stock;
+    const ps = k.items.map((x, i) => ({ id: 'p' + uid(), sku: 'SP' + String(n0 + i + 1).padStart(3, '0'), name: x[0], cat: x[3], cost: x[2], price: x[1], stock: a + Math.floor(rnd() * (b - a)), img: '', demo: 1 }));
+    S.products = ps.concat(S.products);
+    save(); render(); toast('Đã nạp hàng hóa mẫu. Vào Cài đặt để xóa khi muốn.');
+  });
+}
+function demoClear() {
+  ask({ title: 'Xóa hàng hóa mẫu?', msg: 'Chỉ xóa các mặt hàng do "Nạp hàng hóa mẫu" tạo ra, cùng các nhóm hàng mẫu đã trống. Hàng bạn tự nhập và các đơn đã bán giữ nguyên.', ok: 'Xóa hàng mẫu' }, async () => {
+    await snapPut('Trước khi xóa hàng hóa mẫu');
+    const gone = S.products.filter(x => x.demo).map(x => x.id);
+    S.products = S.products.filter(x => !x.demo);
+    // shortcut: nhóm trống trùng tên nhóm mẫu (trừ 5 nhóm mặc định) cũng bị gỡ, kể cả khi do bạn tự tạo.
+    S.cats = S.cats.filter(c => !emptyDemoCats().includes(c));
+    if (!S.cats.includes(ui.cat)) ui.cat = 'Tất cả'; if (!S.cats.includes(ui.pc)) ui.pc = 'Tất cả';
+    gone.forEach(id => delete S.cart.lines[id]);
+    save(); render(); toast('Đã xóa hàng hóa mẫu.');
+  });
+}
+
 const VIEWS = { pos: viewPOS, products: viewProducts, customers: viewCustomers, orders: viewOrders, fund: viewFund, promos: viewPromos, report: viewReport, settings: viewSettings };
-const MODALS = { cats: catsModal, pview: pviewModal, pay: payModal, receipt: receiptModal, prod: prodModal, stock: stockModal, pickcust: pickCustModal, custform: custFormModal, cust: custModal, cash: cashModal, promo: promoModal, impx: impxModal };
+const MODALS = { cats: catsModal, pview: pviewModal, pay: payModal, receipt: receiptModal, prod: prodModal, stock: stockModal, pickcust: pickCustModal, custform: custFormModal, cust: custModal, cash: cashModal, promo: promoModal, impx: impxModal, demo: demoModal };
 
 /* ---------- Modal ---------- */
 function openModal(kind, data) {
@@ -2037,6 +2110,9 @@ document.addEventListener('click', e => {
     case 'rmimg': keepForm('form[data-form="prod"]'); ui.modal.values.img = ''; drawModal(); break;
     case 'backup': backup(); break;
     case 'importx': openModal('impx', {}); break;
+    case 'demoload': openModal('demo'); break;
+    case 'demopick': closeModal(); demoLoad(v); break;
+    case 'democlear': demoClear(); break;
     case 'impfile': $('#imp-file').click(); break;
     case 'impagain': ui.modal.data.res = null; drawModal(); break;
     case 'impgo': impApply(); break;
@@ -2054,6 +2130,8 @@ document.addEventListener('input', e => {
   const val = e.target.value;
   if (k === 'q') { ui.q = val; renderGrid(); }
   else if (k === 'pq') { ui.pq = val; renderPTable(); }
+  else if (k === 'catsel') { ui.cat = val; document.querySelectorAll('[data-act="cat"]').forEach(b => b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === val))); renderGrid(); }
+  else if (k === 'pc') { ui.pc = val; renderPTable(); }
   else if (k === 'oq') { ui.oq = val; renderOList(); }
   else if (k === 'osort') { ui.osort = val; renderOList(); }
   else if (k === 'cq') { ui.cq = val; renderCTable(); }
