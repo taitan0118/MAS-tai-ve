@@ -366,6 +366,8 @@ img.tile{object-fit:cover;background:var(--surface-2)}
   'use strict';
   var COLORS = { leaf: '#22C55E', legsOnLight: '#2563EB', legsOnDark: '#38BDF8', navy: '#0F172A' };
   var BAR = 'M28 58 V46 A12 12 0 0 1 40 34 H160 A12 12 0 0 1 172 46 V58 Z';
+  // Receipt-shaped tile (logo v2: "Hoa don"), drawn in a 200x200 box; the M-T-S mark sits inside at 70%.
+  var BILL = 'M16 22Q16 6 32 6H168Q184 6 184 22V188L156 174L128 188L100 174L72 188L44 174L16 188Z';
 
   function bez(p, t) {
     var u = 1 - t;
@@ -403,12 +405,14 @@ img.tile{object-fit:cover;background:var(--surface-2)}
   // Static logo. theme: 'light' (blue legs) or 'dark' (light-blue legs).
   function svg(opts) {
     opts = opts || {};
-    var legs = opts.theme === 'dark' ? COLORS.legsOnDark : COLORS.legsOnLight;
+    var legs = COLORS.legsOnDark;   // the navy receipt tile is dark in every theme
     var size = opts.size || 40, label = opts.label || 'Missing';
+    var lines = size >= 48 ? '<rect x="56" y="148" width="88" height="6" rx="3" fill="#38BDF8" opacity=".55"/><rect x="56" y="160" width="50" height="6" rx="3" fill="#38BDF8" opacity=".55"/>' : '';
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="' + size + '" height="' + size +
-      '" role="img" aria-label="' + label + '"><g transform="translate(0 -6)">' +
+      '" role="img" aria-label="' + label + '"><path d="' + BILL + '" fill="' + COLORS.navy + '"/>' +
+      '<g transform="translate(30 18) scale(.7)"><g transform="translate(0 -6)">' +
       legPath(40, legs) + legPath(160, legs) +
-      '<path d="' + BAR + '" fill="' + COLORS.leaf + '"/><path d="' + S_D + '" fill="' + COLORS.leaf + '"/></g></svg>';
+      '<path d="' + BAR + '" fill="' + COLORS.leaf + '"/><path d="' + S_D + '" fill="' + COLORS.leaf + '"/></g></g>' + lines + '</svg>';
   }
 
   /* ---------- Sound logo (Web Audio, synthesised, no files) ----------
@@ -486,6 +490,9 @@ img.tile{object-fit:cover;background:var(--surface-2)}
     tone(220, T(1660), 0.5, 0.1, 'triangle', 330);
     spin(T(1380), 0.9, 0.12); spin(T(1680), 0.85, 0.1);       // bars spin back
     tone(330, T(2550), 0.18, 0.08, 'sine');                   // bars land: little tick
+    whoosh(T(2500), 0.36, 3400, 900, 0.16);                   // receipt slides out of the printer
+    tone(2200, T(2900), 0.05, 0.05, 'square');                // two lines print
+    tone(2400, T(3050), 0.05, 0.05, 'square');
     // signature: two rising notes; the voice "Mít xinh!" follows, then a soft chord
     bell(659.25, T(2700), 0.22, 0.5);    // E5
     bell(783.99, T(2860), 0.24, 0.6);    // G5
@@ -567,10 +574,15 @@ img.tile{object-fit:cover;background:var(--surface-2)}
     overlay.setAttribute('aria-hidden', 'true');
     overlay.style.cssText = 'position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;' +
       'background:' + (opts.background || COLORS.navy) + ';cursor:pointer;';
-    var size = Math.min(240, Math.round(Math.min(innerWidth, innerHeight) * 0.42));
+    var size = Math.min(280, Math.round(Math.min(innerWidth, innerHeight) * 0.5));
     overlay.innerHTML =
-      '<svg viewBox="0 0 200 200" width="' + size + '" height="' + size + '" style="overflow:visible;transform-origin:0 0">' +
-      '<g transform="translate(0 -6)"><g class="mi-shake">' +
+      '<svg viewBox="-42.857 -25.714 285.714 285.714" width="' + size + '" height="' + size + '" style="overflow:visible;transform-origin:0 0">' +
+      '<g transform="translate(0 -6)">' +
+      '<g class="mi-bill" opacity="0"><g transform="translate(0 6) scale(1.428571) translate(-30 -18)">' +
+      '<path class="mi-billbg" d="' + BILL + '" fill="#1E293B" stroke="#38BDF8" stroke-opacity=".35" stroke-width="1.5"/>' +
+      '<rect class="mi-l1" x="56" y="148" width="88" height="6" rx="3" fill="#38BDF8" opacity="0"/>' +
+      '<rect class="mi-l2" x="56" y="160" width="50" height="6" rx="3" fill="#38BDF8" opacity="0"/>' +
+      '</g></g><g class="mi-shake">' +
       '<g class="mi-legL"><path class="mi-trailL" d="M-136 111.5 H-36" fill="none" stroke="' + legsIntro + '" stroke-width="4" stroke-linecap="round" stroke-dasharray="30 12"/>' +
       '<g class="mi-spinL">' + legPath(40, legsIntro) + '</g></g>' +
       '<g class="mi-legR"><path class="mi-trailR" d="M236 111.5 H336" fill="none" stroke="' + legsIntro + '" stroke-width="4" stroke-linecap="round" stroke-dasharray="30 12"/>' +
@@ -591,7 +603,7 @@ img.tile{object-fit:cover;background:var(--surface-2)}
       wordText.style.cssText = 'display:inline-block;white-space:nowrap;line-height:1.3;color:#F8FAFC;transform-origin:0 0;' +
         'padding-left:' + Math.round(size * 0.04) + 'px;font-family:' + ws.fontFamily + ';font-weight:' + ws.fontWeight +
         ';letter-spacing:' + (ws.letterSpacing === 'normal' ? '0' : (parseFloat(ws.letterSpacing) / parseFloat(ws.fontSize)) + 'em') +
-        ';font-size:' + Math.round(size * 0.42) + 'px;';
+        ';font-size:' + Math.round(size * 0.34) + 'px;';
       wordBox.appendChild(wordText);
       row.appendChild(wordBox);
     }
@@ -603,14 +615,15 @@ img.tile{object-fit:cover;background:var(--surface-2)}
       if (fit < 1) {
         var svgEl = row.firstChild;
         svgEl.setAttribute('width', Math.round(size * fit)); svgEl.setAttribute('height', Math.round(size * fit));
-        wordText.style.fontSize = Math.round(size * 0.42 * fit) + 'px';
+        wordText.style.fontSize = Math.round(size * 0.34 * fit) + 'px';
         wordText.style.paddingLeft = Math.round(size * 0.04 * fit) + 'px';
         wordW = wordText.getBoundingClientRect().width;
       }
     }
     var root = row.firstChild, q = function (c) { return root.querySelector('.' + c); };
     var stem = q('mi-stem'), bar = q('mi-bar'), legL = q('mi-legL'), legR = q('mi-legR'),
-        spinL = q('mi-spinL'), spinR = q('mi-spinR'), trailL = q('mi-trailL'), trailR = q('mi-trailR'), shake = q('mi-shake');
+        spinL = q('mi-spinL'), spinR = q('mi-spinR'), trailL = q('mi-trailL'), trailR = q('mi-trailR'), shake = q('mi-shake'),
+        bill = q('mi-bill'), billbg = q('mi-billbg'), l1 = q('mi-l1'), l2 = q('mi-l2');
     var N = T_POLY.length / 4, U = [], k;
     for (k = 0; k < 2 * N; k++) U.push(k < N ? k / (N - 1) : (2 * N - 1 - k) / (N - 1));
 
@@ -620,6 +633,10 @@ img.tile{object-fit:cover;background:var(--surface-2)}
       var p = seg(t, tHit, tEnd), e = easeOut(p);
       return { x: lerp(hit, 0, e) + Math.sin(Math.PI * Math.min(p * 1.4, 1)) * 46 * dir,
                y: lerp(dy, 0, e) - Math.sin(Math.PI * p) * 14, r: 90 + 630 * e };
+    }
+    function lineScale(el, x, y, sc) {
+      el.setAttribute('transform', 'translate(' + x + ' ' + y + ') scale(' + Math.max(sc, .001) + ' 1) translate(' + (-x) + ' ' + (-y) + ')');
+      el.style.opacity = sc > 0 ? .55 : 0;
     }
     function frame(t) {
       bar.setAttribute('transform', 'translate(100 46) scale(' + Math.max(easeOut(seg(t, 0, 600)), .001) + ' 1) translate(-100 -46)');
@@ -641,6 +658,12 @@ img.tile{object-fit:cover;background:var(--surface-2)}
         out[i] = lerp(T_POLY[i], S_POLY[i], m); out[i + 1] = lerp(T_POLY[i + 1], S_POLY[i + 1], m);
       }
       stem.setAttribute('d', toD(out));
+      // receipt slides up, then its two lines print
+      var bp = easeOut(seg(t, 2500, 2900));
+      bill.setAttribute('opacity', bp);
+      bill.setAttribute('transform', 'translate(0 ' + lerp(46, 0, bp) + ')');
+      lineScale(l1, 56, 148, easeOut(seg(t, 2900, 3150)));
+      lineScale(l2, 56, 160, easeOut(seg(t, 3050, 3300)));
       if (wordBox) {
         var w = easeOut(seg(t, LAND + 100, LAND + WORD));
         wordBox.style.width = (wordW * w) + 'px';
@@ -676,6 +699,7 @@ img.tile{object-fit:cover;background:var(--surface-2)}
       root.querySelectorAll('.mi-spinL path, .mi-spinR path').forEach(function (p) {
         p.style.transition = 'stroke ' + FLY + 'ms'; p.style.stroke = legsEnd;
       });
+      billbg.style.transition = 'fill ' + FLY + 'ms'; billbg.style.fill = COLORS.navy;
       var a = root.getBoundingClientRect(), b = target.getBoundingClientRect();
       var s = b.width / a.width;
       var dx = b.left - a.left, dy = b.top - a.top;
