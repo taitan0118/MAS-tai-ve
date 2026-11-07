@@ -364,7 +364,7 @@ img.tile{object-fit:cover;background:var(--surface-2)}
  */
 (function (global) {
   'use strict';
-  var COLORS = { leaf: '#22C55E', legsOnLight: '#2563EB', legsOnDark: '#38BDF8', navy: '#0F172A' };
+  var COLORS = { leaf: '#22C55E', legsOnLight: '#2563EB', legsOnDark: '#38BDF8', navy: '#0F172A', paper: '#FFFFFF' };
   var BAR = 'M28 58 V46 A12 12 0 0 1 40 34 H160 A12 12 0 0 1 172 46 V58 Z';
   // Receipt-shaped tile (logo v2: "Hoa don"), drawn in a 200x200 box; the M-T-S mark sits inside at 70%.
   var BILL = 'M16 22Q16 6 32 6H168Q184 6 184 22V188L156 174L128 188L100 174L72 188L44 174L16 188Z';
@@ -405,11 +405,11 @@ img.tile{object-fit:cover;background:var(--surface-2)}
   // Static logo. theme: 'light' (blue legs) or 'dark' (light-blue legs).
   function svg(opts) {
     opts = opts || {};
-    var legs = COLORS.legsOnDark;   // the navy receipt tile is dark in every theme
+    var legs = COLORS.legsOnLight;   // the receipt tile is white (light background) in every theme
     var size = opts.size || 40, label = opts.label || 'Missing';
-    var lines = size >= 48 ? '<rect x="56" y="148" width="88" height="6" rx="3" fill="#38BDF8" opacity=".55"/><rect x="56" y="160" width="50" height="6" rx="3" fill="#38BDF8" opacity=".55"/>' : '';
+    var lines = size >= 48 ? '<rect x="56" y="148" width="88" height="6" rx="3" fill="#2563EB" opacity=".3"/><rect x="56" y="160" width="50" height="6" rx="3" fill="#2563EB" opacity=".3"/>' : '';
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="' + size + '" height="' + size +
-      '" role="img" aria-label="' + label + '"><path d="' + BILL + '" fill="' + COLORS.navy + '"/>' +
+      '" role="img" aria-label="' + label + '"><path d="' + BILL + '" fill="' + COLORS.paper + '"/>' +
       '<g transform="translate(30 18) scale(.7)"><g transform="translate(0 -6)">' +
       legPath(40, legs) + legPath(160, legs) +
       '<path d="' + BAR + '" fill="' + COLORS.leaf + '"/><path d="' + S_D + '" fill="' + COLORS.leaf + '"/></g></g>' + lines + '</svg>';
@@ -699,7 +699,8 @@ img.tile{object-fit:cover;background:var(--surface-2)}
       root.querySelectorAll('.mi-spinL path, .mi-spinR path').forEach(function (p) {
         p.style.transition = 'stroke ' + FLY + 'ms'; p.style.stroke = legsEnd;
       });
-      billbg.style.transition = 'fill ' + FLY + 'ms'; billbg.style.fill = COLORS.navy;
+      billbg.style.transition = 'fill ' + FLY + 'ms'; billbg.style.fill = COLORS.paper;
+      [l1, l2].forEach(function (l) { l.style.transition = 'fill ' + FLY + 'ms, opacity ' + FLY + 'ms'; l.style.fill = COLORS.legsOnLight; l.style.opacity = .3; });
       var a = root.getBoundingClientRect(), b = target.getBoundingClientRect();
       var s = b.width / a.width;
       var dx = b.left - a.left, dy = b.top - a.top;
@@ -2234,10 +2235,10 @@ applyTheme();
 render();
 function introLogo(replay) {
   const m = matchMedia('(max-width:820px)').matches;
-  MissingLogo.intro({ target: m ? '#m-logo' : '#site-logo', word: m ? '#m-word' : '#site-word', theme: 'dark', once: !replay });
+  MissingLogo.intro({ target: m ? '#m-logo' : '#site-logo', word: m ? '#m-word' : '#site-word', theme: 'light', once: !replay });
 }
-$('#site-logo').innerHTML = MissingLogo.svg({ size: 44, theme: 'dark' });
-$('#m-logo').innerHTML = MissingLogo.svg({ size: 28, theme: 'dark' });
+$('#site-logo').innerHTML = MissingLogo.svg({ size: 44 });
+$('#m-logo').innerHTML = MissingLogo.svg({ size: 28 });
 introLogo(false);
 if (IS_APP && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 setTimeout(snapAuto, 3000); setInterval(snapAuto, 36e5);
